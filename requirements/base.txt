@@ -15,7 +15,7 @@ requests-cache==1.1.1
 geopy==2.4.1
 
 # Caching & Performance
-redis==5.0.1
+redis==4.6.0
 django-redis==5.4.0
 django-ratelimit==4.1.0
 
