@@ -18,17 +18,17 @@ The Air Quality API provides real-time and forecasted air quality data for any l
 
 ### Base URL
 ```
-https://breathe-api.com/api/v1/
+https://www.breathe-api.com/api/v1/
 ```
 
-**Alternative URL (Heroku direct):**
+**Alternative URLs:**
 ```
-https://breathe-api-115e7fded77a.herokuapp.com/api/v1/
+https://breathe-api-115e7fded77a.herokuapp.com/api/v1/  (Heroku direct)
 ```
 
 ### Your First Request
 ```bash
-curl "https://breathe-api.com/api/v1/air-quality/?lat=34.05&lon=-118.24"
+curl "https://www.breathe-api.com/api/v1/air-quality/?lat=34.05&lon=-118.24"
 ```
 
 ### Response (200 OK)
