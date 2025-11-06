@@ -24,11 +24,8 @@ CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[])
 
 # Production logging - use console for Heroku
 # Heroku aggregates logs from stdout/stderr
-LOGGING['handlers'].pop('file', None)  # Remove file handler for Heroku
-LOGGING['root']['handlers'] = ['console']
+# Console-only logging is already configured in base.py
 LOGGING['root']['level'] = 'INFO'
-LOGGING['loggers']['django']['handlers'] = ['console']
-LOGGING['loggers']['apps']['handlers'] = ['console']
 LOGGING['loggers']['apps']['level'] = 'INFO'
 
 # Static files handling with WhiteNoise

@@ -255,6 +255,10 @@ AIR_QUALITY_SETTINGS = {
 
 # Logging Configuration
 
+# Create logs directory if it doesn't exist (for local development)
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -273,11 +277,6 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs' / 'airquality.log',
-            'formatter': 'verbose',
-        },
     },
     'root': {
         'handlers': ['console'],
@@ -285,12 +284,12 @@ LOGGING = {
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
         'apps': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,
         },
