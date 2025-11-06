@@ -34,6 +34,26 @@ LOGGING['loggers']['apps']['level'] = 'INFO'
 # Static files handling with WhiteNoise
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# Redis configuration for Heroku
+import ssl
+redis_url = env('REDIS_URL', default='redis://127.0.0.1:6379/0')
+if redis_url.startswith('rediss://'):
+    # Heroku Redis uses TLS, configure SSL settings
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': redis_url,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'CONNECTION_POOL_KWARGS': {
+                    'ssl_cert_reqs': None,  # Disable cert verification for Heroku Redis
+                }
+            },
+            'KEY_PREFIX': 'airquality',
+            'TIMEOUT': env('CACHE_TTL_SECONDS'),
+        }
+    }
+
 # Email configuration for production
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = env('EMAIL_HOST', default='localhost')
