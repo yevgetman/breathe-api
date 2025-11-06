@@ -22,13 +22,17 @@ ALLOWED_HOSTS = env.list('ALLOWED_HOSTS')
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[])
 
-# Production logging - may want to use external service like Sentry
-LOGGING['handlers']['file']['filename'] = '/var/log/airquality/airquality.log'
-LOGGING['root']['level'] = 'WARNING'
+# Production logging - use console for Heroku
+# Heroku aggregates logs from stdout/stderr
+LOGGING['handlers'].pop('file', None)  # Remove file handler for Heroku
+LOGGING['root']['handlers'] = ['console']
+LOGGING['root']['level'] = 'INFO'
+LOGGING['loggers']['django']['handlers'] = ['console']
+LOGGING['loggers']['apps']['handlers'] = ['console']
 LOGGING['loggers']['apps']['level'] = 'INFO'
 
-# Static files handling - use WhiteNoise or CDN
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+# Static files handling with WhiteNoise
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Email configuration for production
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

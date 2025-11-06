@@ -1,0 +1,100 @@
+{
+  "name": "Air Quality API",
+  "description": "A unified API for fetching air quality data from multiple sources",
+  "repository": "https://github.com/yourusername/air-api",
+  "keywords": ["python", "django", "air-quality", "api"],
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "env": {
+    "SECRET_KEY": {
+      "description": "Django secret key for cryptographic signing",
+      "generator": "secret",
+      "required": true
+    },
+    "DJANGO_SETTINGS_MODULE": {
+      "description": "Django settings module to use",
+      "value": "config.settings.production",
+      "required": true
+    },
+    "DEBUG": {
+      "description": "Set to False in production",
+      "value": "False",
+      "required": true
+    },
+    "ALLOWED_HOSTS": {
+      "description": "Comma-separated list of allowed hosts (e.g., yourapp.herokuapp.com)",
+      "required": true
+    },
+    "CORS_ALLOWED_ORIGINS": {
+      "description": "Comma-separated list of CORS allowed origins",
+      "required": false
+    },
+    "AIRNOW_API_KEY": {
+      "description": "API key for AirNow",
+      "required": false
+    },
+    "PURPLEAIR_API_KEY": {
+      "description": "API key for PurpleAir",
+      "required": false
+    },
+    "OPENWEATHERMAP_API_KEY": {
+      "description": "API key for OpenWeatherMap",
+      "required": false
+    },
+    "WAQI_API_KEY": {
+      "description": "API key for World Air Quality Index",
+      "required": false
+    },
+    "AIRVISUAL_API_KEY": {
+      "description": "API key for AirVisual",
+      "required": false
+    },
+    "BREEZOMETER_API_KEY": {
+      "description": "API key for BreezoMeter",
+      "required": false
+    },
+    "GOOGLE_GEOCODING_API_KEY": {
+      "description": "API key for Google Geocoding",
+      "required": false
+    },
+    "CACHE_TTL_SECONDS": {
+      "description": "Cache TTL in seconds",
+      "value": "600",
+      "required": false
+    },
+    "LOCATION_CACHE_TTL_SECONDS": {
+      "description": "Location cache TTL in seconds",
+      "value": "86400",
+      "required": false
+    },
+    "RATE_LIMIT_PER_MINUTE": {
+      "description": "Rate limit per minute",
+      "value": "100",
+      "required": false
+    },
+    "SENTRY_DSN": {
+      "description": "Sentry DSN for error tracking (optional)",
+      "required": false
+    }
+  },
+  "addons": [
+    {
+      "plan": "heroku-postgresql:mini",
+      "as": "DATABASE"
+    },
+    {
+      "plan": "heroku-redis:mini",
+      "as": "REDIS"
+    }
+  ],
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "stack": "heroku-22"
+}
