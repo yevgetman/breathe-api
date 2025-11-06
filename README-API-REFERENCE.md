@@ -18,12 +18,12 @@ The Air Quality API provides real-time and forecasted air quality data for any l
 
 ### Base URL
 ```
-https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/
+https://breathe-api-115e7fded77a.herokuapp.com/api/v1/
 ```
 
 ### Your First Request
 ```bash
-curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=34.05&lon=-118.24"
+curl "https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=34.05&lon=-118.24"
 ```
 
 ### Response (200 OK)
@@ -135,22 +135,22 @@ GET /api/v1/air-quality/
 
 **Basic Request:**
 ```bash
-curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=40.71&lon=-74.01"
+curl "https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=40.71&lon=-74.01"
 ```
 
 **With Forecast:**
 ```bash
-curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=40.71&lon=-74.01&include_forecast=true"
+curl "https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=40.71&lon=-74.01&include_forecast=true"
 ```
 
 **Custom Search Radius:**
 ```bash
-curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=37.77&lon=-122.42&radius_km=10"
+curl "https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=37.77&lon=-122.42&radius_km=10"
 ```
 
 **Fresh Data (Skip Cache):**
 ```bash
-curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=34.05&lon=-118.24&no_cache=true"
+curl "https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=34.05&lon=-118.24&no_cache=true"
 ```
 
 #### AQI Categories
@@ -204,7 +204,7 @@ GET /api/v1/health-advice/
 
 **Good Air Quality:**
 ```bash
-curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/health-advice/?aqi=45"
+curl "https://breathe-api-115e7fded77a.herokuapp.com/api/v1/health-advice/?aqi=45"
 ```
 
 **Response:**
@@ -221,7 +221,7 @@ curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/health-advice/?
 
 **Unhealthy Air Quality:**
 ```bash
-curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/health-advice/?aqi=165"
+curl "https://breathe-api-115e7fded77a.herokuapp.com/api/v1/health-advice/?aqi=165"
 ```
 
 **Response:**
@@ -281,7 +281,7 @@ None required.
 #### Example Request
 
 ```bash
-curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/sources/"
+curl "https://breathe-api-115e7fded77a.herokuapp.com/api/v1/sources/"
 ```
 
 #### Example Response
@@ -365,7 +365,7 @@ None required.
 #### Example Request
 
 ```bash
-curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/health/"
+curl "https://breathe-api-115e7fded77a.herokuapp.com/api/v1/health/"
 ```
 
 #### Example Responses
@@ -421,7 +421,7 @@ curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/health/"
 ```javascript
 async function getCurrentAirQuality(lat, lon) {
   const response = await fetch(
-    `https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}`
+    `https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}`
   );
   const data = await response.json();
   
@@ -447,7 +447,7 @@ console.log(`${airQuality.city}: AQI ${airQuality.aqi} (${airQuality.category})`
 ```javascript
 async function getAirQualityForecast(lat, lon) {
   const response = await fetch(
-    `https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}&include_forecast=true`
+    `https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}&include_forecast=true`
   );
   const data = await response.json();
   
@@ -474,7 +474,7 @@ forecast.slice(0, 24).forEach(hour => {
 ```javascript
 async function checkAirQuality(lat, lon) {
   const response = await fetch(
-    `https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}`
+    `https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}`
   );
   const data = await response.json();
   
@@ -497,13 +497,13 @@ async function checkAirQuality(lat, lon) {
 ```javascript
 async function addAirQualityMarker(map, lat, lon) {
   const response = await fetch(
-    `https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}`
+    `https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}`
   );
   const data = await response.json();
   
   // Get color from health advice endpoint
   const adviceResponse = await fetch(
-    `https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/health-advice/?aqi=${data.current.aqi}`
+    `https://breathe-api-115e7fded77a.herokuapp.com/api/v1/health-advice/?aqi=${data.current.aqi}`
   );
   const advice = await adviceResponse.json();
   
@@ -526,7 +526,7 @@ async function addAirQualityMarker(map, lat, lon) {
 ```javascript
 async function getActivityRecommendation(lat, lon) {
   const response = await fetch(
-    `https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}`
+    `https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}`
   );
   const data = await response.json();
   
@@ -600,7 +600,7 @@ All errors return a consistent JSON structure:
 async function safeAPICall(lat, lon) {
   try {
     const response = await fetch(
-      `https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}`
+      `https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}`
     );
     
     if (!response.ok) {
@@ -686,7 +686,7 @@ X-RateLimit-Reset: 1699286400
 
 ```javascript
 // Vanilla JavaScript
-fetch('https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=34.05&lon=-118.24')
+fetch('https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=34.05&lon=-118.24')
   .then(response => response.json())
   .then(data => {
     document.getElementById('aqi').textContent = data.current.aqi;
@@ -703,7 +703,7 @@ function AirQualityWidget({ lat, lon }) {
   const [airQuality, setAirQuality] = useState(null);
   
   useEffect(() => {
-    fetch(`https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}`)
+    fetch(`https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=${lat}&lon=${lon}`)
       .then(res => res.json())
       .then(data => setAirQuality(data));
   }, [lat, lon]);
@@ -727,7 +727,7 @@ function AirQualityWidget({ lat, lon }) {
 import requests
 
 def get_air_quality(lat, lon):
-    url = f"https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/"
+    url = f"https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/"
     params = {"lat": lat, "lon": lon}
     
     response = requests.get(url, params=params)
@@ -749,14 +749,14 @@ print(f"AQI: {air_quality['aqi']} ({air_quality['category']})")
 
 ```bash
 # Basic request
-curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=34.05&lon=-118.24"
+curl "https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=34.05&lon=-118.24"
 
 # With headers
 curl -H "Accept: application/json" \
-     "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=40.71&lon=-74.01"
+     "https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=40.71&lon=-74.01"
 
 # Pretty print
-curl "https://air-quiality-api-60b89b17b734.herokuapp.com/api/v1/air-quality/?lat=37.77&lon=-122.42" | jq
+curl "https://breathe-api-115e7fded77a.herokuapp.com/api/v1/air-quality/?lat=37.77&lon=-122.42" | jq
 ```
 
 ---
