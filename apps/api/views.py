@@ -251,6 +251,18 @@ class HealthCheckView(APIView):
         return Response(health, status=status_code)
 
 
+class HomeView(View):
+    """
+    Landing page for non-technical visitors.
+    
+    GET /
+    """
+    
+    def get(self, request):
+        """Render the homepage."""
+        return render(request, 'home.html')
+
+
 class DemoView(View):
     """
     Interactive demo page with world map.

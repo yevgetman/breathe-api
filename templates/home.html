@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breathe API - Real-Time Air Quality Data for Everyone</title>
+    <meta name="description" content="Get accurate, hyper-local air quality information for any location. Perfect for health apps, weather services, and outdoor activity planning.">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 3.5em;
+            margin-bottom: 20px;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header .tagline {
+            font-size: 1.5em;
+            margin-bottom: 40px;
+            opacity: 0.95;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: #667eea;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-size: 1.2em;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Section */
+        section {
+            padding: 80px 20px;
+        }
+        
+        section h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #2d3748;
+        }
+        
+        section .subtitle {
+            text-align: center;
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 60px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Features Grid */
+        .features {
+            background: #f8f9fa;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+        
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: #2d3748;
+        }
+        
+        .feature-card p {
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        /* Use Cases */
+        .use-cases {
+            background: white;
+        }
+        
+        .use-cases-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+        
+        .use-case {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 30px;
+            border-radius: 12px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .use-case h3 {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .use-case p {
+            color: #666;
+            line-height: 1.7;
+        }
+        
+        /* How It Works */
+        .how-it-works {
+            background: #f8f9fa;
+        }
+        
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+        
+        .step {
+            text-align: center;
+        }
+        
+        .step-number {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            font-weight: 700;
+            margin: 0 auto 20px;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .step h3 {
+            font-size: 1.3em;
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+        
+        .step p {
+            color: #666;
+            line-height: 1.7;
+        }
+        
+        /* Data Sources */
+        .data-sources {
+            background: white;
+        }
+        
+        .sources-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+        
+        .source-badge {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 600;
+            color: #667eea;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .source-badge:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+        
+        .cta-section h2 {
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .cta-section p {
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            opacity: 0.95;
+        }
+        
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-primary {
+            background: white;
+            color: #667eea;
+            padding: 16px 36px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 16px 36px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: 2px solid white;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px);
+        }
+        
+        /* Stats */
+        .stats {
+            background: #2d3748;
+            color: white;
+            padding: 60px 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+        
+        .stat {
+            padding: 20px;
+        }
+        
+        .stat-number {
+            font-size: 3em;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        /* Footer */
+        .footer {
+            background: #1a202c;
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5em;
+            }
+            
+            .header .tagline {
+                font-size: 1.2em;
+            }
+            
+            section h2 {
+                font-size: 2em;
+            }
+            
+            .features-grid,
+            .use-cases-grid,
+            .steps {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Highlight Box */
+        .highlight-box {
+            background: linear-gradient(135deg, #e0e7ff 0%, #f3e8ff 100%);
+            padding: 30px;
+            border-radius: 12px;
+            margin-top: 40px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .highlight-box h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .highlight-box p {
+            color: #4a5568;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="container">
+            <h1>🌬️ Breathe API</h1>
+            <p class="tagline">Real-time air quality data for any location on Earth. Simple, accurate, and always up-to-date.</p>
+            <a href="/demo/" class="cta-button">Try Interactive Demo →</a>
+        </div>
+    </div>
+    
+    <!-- Stats Section -->
+    <div class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-number">5+</div>
+                    <div class="stat-label">Data Sources</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">Global</div>
+                    <div class="stat-label">Coverage</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">&lt;2s</div>
+                    <div class="stat-label">Response Time</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">Real-Time Updates</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- What We Do -->
+    <section>
+        <div class="container">
+            <h2>What is Breathe API?</h2>
+            <p class="subtitle">
+                Breathe API gives you instant access to air quality information for any location in the world. 
+                We combine data from government monitoring stations, community sensors, and atmospheric models 
+                to provide the most accurate, hyper-local air quality data available.
+            </p>
+            
+            <div class="highlight-box">
+                <h3>Why Air Quality Matters</h3>
+                <p>
+                    Air quality affects everyone's daily life. Poor air quality can impact your health, outdoor activities, 
+                    and overall well-being. Whether you're planning a jog, managing asthma, or just want to know if it's 
+                    safe to open the windows, our API provides the information you need to make informed decisions.
+                </p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Features -->
+    <section class="features">
+        <div class="container">
+            <h2>Why Choose Breathe API?</h2>
+            <p class="subtitle">We make air quality data accessible, accurate, and actionable</p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Hyper-Local Accuracy</h3>
+                    <p>
+                        Get air quality data specific to your exact location, not just the nearest city. 
+                        We analyze sensors within a customizable radius to give you the most relevant information.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Always Up-to-Date</h3>
+                    <p>
+                        Our data refreshes every 10 minutes, combining information from multiple trusted sources 
+                        to ensure you're always getting the latest air quality readings.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🧠</div>
+                    <h3>Smart Data Blending</h3>
+                    <p>
+                        We don't just show you one source. Our intelligent system blends data from government stations, 
+                        community sensors, and atmospheric models to give you the most reliable reading.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🌍</div>
+                    <h3>Global Coverage</h3>
+                    <p>
+                        Whether you're in Los Angeles, Toronto, or Tokyo, get accurate air quality data 
+                        for virtually any location worldwide.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Easy to Understand</h3>
+                    <p>
+                        We translate complex pollutant measurements into simple AQI scores and plain-language 
+                        health advice that anyone can understand.
+                    </p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔮</div>
+                    <h3>4-Day Forecasts</h3>
+                    <p>
+                        Plan ahead with hourly air quality forecasts for the next 96 hours. Perfect for 
+                        scheduling outdoor activities or managing health conditions.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Use Cases -->
+    <section class="use-cases">
+        <div class="container">
+            <h2>Perfect For...</h2>
+            <p class="subtitle">Developers and businesses use Breathe API to power their applications</p>
+            
+            <div class="use-cases-grid">
+                <div class="use-case">
+                    <h3>🌦️ Weather Apps</h3>
+                    <p>Add air quality information alongside temperature and precipitation forecasts.</p>
+                </div>
+                
+                <div class="use-case">
+                    <h3>🏃 Fitness Apps</h3>
+                    <p>Help users plan outdoor workouts when air quality is good and stay safe when it's poor.</p>
+                </div>
+                
+                <div class="use-case">
+                    <h3>🏥 Health Apps</h3>
+                    <p>Monitor air quality for people with asthma, allergies, or other respiratory conditions.</p>
+                </div>
+                
+                <div class="use-case">
+                    <h3>🏠 Smart Homes</h3>
+                    <p>Automatically control air purifiers, windows, and HVAC systems based on outdoor air quality.</p>
+                </div>
+                
+                <div class="use-case">
+                    <h3>🗺️ Maps & Travel</h3>
+                    <p>Show air quality information on maps to help travelers choose healthier routes.</p>
+                </div>
+                
+                <div class="use-case">
+                    <h3>📱 Mobile Apps</h3>
+                    <p>Send push notifications when air quality becomes unhealthy in a user's area.</p>
+                </div>
+                
+                <div class="use-case">
+                    <h3>🏢 Real Estate</h3>
+                    <p>Provide air quality insights for properties and neighborhoods.</p>
+                </div>
+                
+                <div class="use-case">
+                    <h3>🌱 Environmental Awareness</h3>
+                    <p>Educate communities about local air quality trends and environmental health.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- How It Works -->
+    <section class="how-it-works">
+        <div class="container">
+            <h2>How It Works</h2>
+            <p class="subtitle">Getting air quality data is as simple as 1-2-3</p>
+            
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Pick a Location</h3>
+                    <p>Provide any latitude and longitude coordinates anywhere in the world.</p>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>We Find the Data</h3>
+                    <p>Our system searches multiple trusted sources for air quality data near your location.</p>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Get Smart Results</h3>
+                    <p>Receive blended, accurate AQI scores with health advice and detailed pollutant information.</p>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>Display to Users</h3>
+                    <p>Use the data in your app, website, or system to help people make informed decisions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Data Sources -->
+    <section class="data-sources">
+        <div class="container">
+            <h2>Trusted Data Sources</h2>
+            <p class="subtitle">We combine information from the world's most reliable air quality data providers</p>
+            
+            <div class="sources-grid">
+                <div class="source-badge">EPA AirNow</div>
+                <div class="source-badge">PurpleAir</div>
+                <div class="source-badge">OpenWeatherMap</div>
+                <div class="source-badge">WAQI</div>
+                <div class="source-badge">AirVisual</div>
+                <div class="source-badge">ECCC (Canada)</div>
+            </div>
+            
+            <div class="highlight-box">
+                <h3>Why Multiple Sources?</h3>
+                <p>
+                    Different data sources have different strengths. Government stations are highly reliable but sparsely located. 
+                    Community sensors provide hyper-local data but can be less consistent. Atmospheric models fill in gaps but 
+                    may lack precision. By combining all these sources intelligently, we give you the most accurate picture possible.
+                </p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>Ready to Get Started?</h2>
+            <p>Try our interactive demo or check out the developer documentation</p>
+            
+            <div class="cta-buttons">
+                <a href="/demo/" class="btn-primary">Try Interactive Demo</a>
+                <a href="https://github.com/yourusername/air-api" class="btn-secondary">View API Docs</a>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Footer -->
+    <div class="footer">
+        <div class="container">
+            <p>
+                <strong>Breathe API</strong> - Real-time air quality data for everyone
+            </p>
+            <p style="margin-top: 15px; opacity: 0.8;">
+                <a href="/api/v1/health/">API Status</a> • 
+                <a href="/api/v1/sources/">Data Sources</a> • 
+                <a href="/demo/">Interactive Demo</a>
+            </p>
+            <p style="margin-top: 20px; font-size: 0.9em; opacity: 0.7;">
+                Data provided by EPA AirNow, PurpleAir, OpenWeatherMap, WAQI, AirVisual, and ECCC
+            </p>
+        </div>
+    </div>
+</body>
+</html>
