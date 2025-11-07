@@ -6,6 +6,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.core.cache import cache
+from django.shortcuts import render
+from django.views import View
 
 from apps.core.utils import validate_coordinates
 from .orchestrator import AirQualityOrchestrator
@@ -247,3 +249,15 @@ class HealthCheckView(APIView):
         status_code = status.HTTP_200_OK if health['status'] != 'unhealthy' else status.HTTP_503_SERVICE_UNAVAILABLE
         
         return Response(health, status=status_code)
+
+
+class DemoView(View):
+    """
+    Interactive demo page with world map.
+    
+    GET /demo/
+    """
+    
+    def get(self, request):
+        """Render the demo page."""
+        return render(request, 'demo.html')
