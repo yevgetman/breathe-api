@@ -390,7 +390,7 @@
     <div class="header">
         <div class="container">
             <h1>🌬️ Breathe API</h1>
-            <p class="tagline">Real-time air quality data for any location on Earth. Simple, accurate, and always up-to-date.</p>
+            <p class="tagline">The only air quality API that intelligently blends data from 5+ trusted sources to give you the most accurate readings available.</p>
             <a href="/demo/" class="cta-button">Try Interactive Demo →</a>
         </div>
     </div>
@@ -401,7 +401,7 @@
             <div class="stats-grid">
                 <div class="stat">
                     <div class="stat-number">5+</div>
-                    <div class="stat-label">Data Sources</div>
+                    <div class="stat-label">Sources Blended</div>
                 </div>
                 <div class="stat">
                     <div class="stat-number">Global</div>
@@ -424,17 +424,19 @@
         <div class="container">
             <h2>What is Breathe API?</h2>
             <p class="subtitle">
-                Breathe API gives you instant access to air quality information for any location in the world. 
-                We combine data from government monitoring stations, community sensors, and atmospheric models 
-                to provide the most accurate, hyper-local air quality data available.
+                Unlike other air quality APIs that pull from a single source, Breathe API is an <strong>intelligent aggregation platform</strong> 
+                that combines data from government monitoring stations, community sensors, and atmospheric models in real-time. 
+                Our proprietary blending algorithm weighs each source based on reliability, proximity, and data freshness to give you 
+                the most accurate air quality readings possible.
             </p>
             
             <div class="highlight-box">
-                <h3>Why Air Quality Matters</h3>
+                <h3>The Problem with Single-Source APIs</h3>
                 <p>
-                    Air quality affects everyone's daily life. Poor air quality can impact your health, outdoor activities, 
-                    and overall well-being. Whether you're planning a jog, managing asthma, or just want to know if it's 
-                    safe to open the windows, our API provides the information you need to make informed decisions.
+                    Most air quality APIs simply pass through data from one provider. But what if that sensor is broken? What if the 
+                    nearest government station is 50 miles away? What if the atmospheric model doesn't account for local wildfires? 
+                    <strong>Breathe API solves this by intelligently aggregating multiple sources</strong>, cross-checking data, and using 
+                    advanced weighting algorithms to filter out anomalies and provide the most reliable reading for any location.
                 </p>
             </div>
         </div>
@@ -467,10 +469,11 @@
                 
                 <div class="feature-card">
                     <div class="feature-icon">🧠</div>
-                    <h3>Smart Data Blending</h3>
+                    <h3>Intelligent Aggregation Engine</h3>
                     <p>
-                        We don't just show you one source. Our intelligent system blends data from government stations, 
-                        community sensors, and atmospheric models to give you the most reliable reading.
+                        Our proprietary algorithm doesn't just average data—it weighs each source based on trust scores, 
+                        distance, data freshness, and quality level. Government stations get priority, but nearby community 
+                        sensors fill gaps and catch local pollution events that official networks miss.
                     </p>
                 </div>
                 
@@ -604,11 +607,14 @@
             </div>
             
             <div class="highlight-box">
-                <h3>Why Multiple Sources?</h3>
+                <h3>How Our Intelligent Aggregation Works</h3>
                 <p>
-                    Different data sources have different strengths. Government stations are highly reliable but sparsely located. 
-                    Community sensors provide hyper-local data but can be less consistent. Atmospheric models fill in gaps but 
-                    may lack precision. By combining all these sources intelligently, we give you the most accurate picture possible.
+                    <strong>Step 1:</strong> We query multiple air quality APIs simultaneously (EPA AirNow, PurpleAir, OpenWeatherMap, WAQI, AirVisual, ECCC).<br><br>
+                    <strong>Step 2:</strong> Our algorithm evaluates each data point based on source reliability, sensor distance from your location, 
+                    data timestamp, and quality indicators.<br><br>
+                    <strong>Step 3:</strong> We apply intelligent weighting—government sources get 1.0 trust weight, community sensors 0.85, 
+                    atmospheric models 0.7—then blend readings using exponential distance decay.<br><br>
+                    <strong>Step 4:</strong> The result? A single, highly accurate AQI reading that's more reliable than any single source could provide.
                 </p>
             </div>
         </div>
