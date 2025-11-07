@@ -220,6 +220,7 @@
         }
         
         .source-badge {
+            display: block;
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             padding: 20px;
             border-radius: 12px;
@@ -228,11 +229,13 @@
             color: #667eea;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
             transition: all 0.3s ease;
+            text-decoration: none;
         }
         
         .source-badge:hover {
             transform: translateY(-3px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
         }
         
         /* CTA Section */
@@ -592,12 +595,12 @@
             <p class="subtitle">We combine information from the world's most reliable air quality data providers</p>
             
             <div class="sources-grid">
-                <div class="source-badge">EPA AirNow</div>
-                <div class="source-badge">PurpleAir</div>
-                <div class="source-badge">OpenWeatherMap</div>
-                <div class="source-badge">WAQI</div>
-                <div class="source-badge">AirVisual</div>
-                <div class="source-badge">ECCC (Canada)</div>
+                <a href="https://www.airnow.gov/" target="_blank" rel="noopener noreferrer" class="source-badge">EPA AirNow</a>
+                <a href="https://www2.purpleair.com/" target="_blank" rel="noopener noreferrer" class="source-badge">PurpleAir</a>
+                <a href="https://openweathermap.org/api/air-pollution" target="_blank" rel="noopener noreferrer" class="source-badge">OpenWeatherMap</a>
+                <a href="https://waqi.info/" target="_blank" rel="noopener noreferrer" class="source-badge">WAQI</a>
+                <a href="https://www.iqair.com/" target="_blank" rel="noopener noreferrer" class="source-badge">AirVisual</a>
+                <a href="https://weather.gc.ca/airquality/pages/index_e.html" target="_blank" rel="noopener noreferrer" class="source-badge">ECCC (Canada)</a>
             </div>
             
             <div class="highlight-box">
@@ -619,7 +622,7 @@
             
             <div class="cta-buttons">
                 <a href="/demo/" class="btn-primary">Try Interactive Demo</a>
-                <a href="https://github.com/yourusername/air-api" class="btn-secondary">View API Docs</a>
+                <a href="https://github.com/yevgetman/air-quality-api/blob/master/README-API-REFERENCE.md" class="btn-secondary" target="_blank" rel="noopener noreferrer">View API Docs</a>
             </div>
         </div>
     </section>
