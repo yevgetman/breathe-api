@@ -17,20 +17,24 @@ A comprehensive microservice that blends multiple air quality data sources to pr
 - **Hyper-Local Data**: Utilizes community sensors for precise local measurements
 - **Forecast Support**: Aggregates 4-day air quality forecasts
 - **Region-Specific**: Optimized source priorities for U.S. and Canada
-- **Caching Layer**: Redis-backed caching for performance
-- **RESTful API**: Clean, well-documented endpoints
+- **Resilient by Design**: Circuit breakers on every adapter, graceful cache degradation, atomic status tracking
+- **Data Validation**: AQI range enforcement (0-500), NaN/Inf filtering, negative-value rejection
+- **Caching Layer**: Redis-backed caching with automatic fallback when Redis is unavailable
+- **RESTful API**: Clean, well-documented endpoints with strict input validation
 - **Admin Interface**: Django admin for monitoring and configuration
+- **Test Suite**: 74 automated tests covering adapters, fusion engine, views, and utilities
 
 ## 📋 Architecture
 
 The system follows a layered microservice architecture:
 
 1. **API Gateway** - REST endpoints with validation and rate limiting
-2. **Location Resolution** - Geocoding and region detection with caching
-3. **Data Adapters** - Modular adapters for each data source
-4. **Fusion Engine** - Intelligent blending with weighted averaging
-5. **Forecast Aggregator** - Multi-source forecast merging
-6. **Response Generator** - Unified response formatting
+2. **Orchestrator** - Parallel adapter dispatch with per-adapter timeouts
+3. **Location Resolution** - Geocoding and region detection with caching
+4. **Data Adapters** - Modular adapters for each data source, each with a circuit breaker
+5. **Fusion Engine** - Intelligent blending with weighted averaging and data validation
+6. **Forecast Aggregator** - Multi-source forecast merging
+7. **Response Generator** - Unified response formatting
 
 ## 🚀 Quick Start
 
@@ -45,7 +49,8 @@ The system follows a layered microservice architecture:
 
 1. **Clone the repository**
 ```bash
-cd /Users/yev/Sites/air-api
+git clone https://github.com/yevgetman/breathe-api.git
+cd breathe-api
 ```
 
 2. **Create virtual environment**
@@ -193,10 +198,18 @@ air-api/
 │   ├── fusion/                 # Data blending engine
 │   ├── forecast/               # Forecast aggregation
 │   └── api/                    # API endpoints
+├── tests/                     # Test suite (74 tests)
+│   ├── conftest.py            # Shared fixtures
+│   ├── test_circuit_breaker.py
+│   ├── test_adapter_error_handling.py
+│   ├── test_fusion_engine.py
+│   ├── test_views.py
+│   └── test_utils.py
 ├── requirements/
 │   ├── base.txt
 │   ├── development.txt
 │   └── production.txt
+├── pytest.ini
 ├── manage.py
 └── README.md
 ```
@@ -237,29 +250,31 @@ SourceWeight.objects.create(
 
 ## 🧪 Testing
 
-### Test API Integrations
-Verify all external API keys are valid and endpoints are accessible:
-
-```bash
-# Quick test all API integrations
-python test_api_integrations.py
-
-# Expected output: ✓ All API integrations are working!
-```
-
-See [`API_INTEGRATION_TESTING.md`](API_INTEGRATION_TESTING.md) for detailed testing documentation.
-
 ### Unit and Integration Tests
+
+The project includes 74 automated tests covering circuit breaker behavior, adapter error handling, fusion engine edge cases, API input validation, and core utilities.
 
 ```bash
 # Run all tests
 pytest
 
+# Run with verbose output
+pytest -v
+
 # Run with coverage
 pytest --cov=apps
 
-# Run specific test file
-pytest apps/adapters/tests/test_airnow.py
+# Run a specific test file
+pytest tests/test_circuit_breaker.py
+pytest tests/test_fusion_engine.py
+pytest tests/test_views.py
+```
+
+### Test API Integrations
+Verify all external API keys are valid and endpoints are accessible:
+
+```bash
+python test-files/test_api_integrations.py
 ```
 
 ## 📊 Admin Interface
@@ -328,9 +343,17 @@ The fusion engine uses weighted averaging with multiple factors:
 2. **Time Decay**: Recent data weighted higher (exponential decay)
 3. **Distance Weight**: Closer sensors weighted higher
 4. **Quality Level**: Verified > Sensor > Model > Estimated
-5. **Confidence Score**: Sensor-specific confidence metrics
+5. **Confidence Score**: Sensor-specific confidence (unknown defaults to 0.5 conservatively)
 
 Final weight = Trust × Time × Distance × Quality × Confidence
+
+### Data Validation
+
+Before blending, the engine filters out invalid data:
+- AQI values that are `None`, `NaN`, `Inf`, negative, or above 500 are skipped
+- Pollutant concentrations that are negative, `NaN`, or `Inf` are excluded
+- Blended AQI is clamped to the 0-500 EPA range
+- PurpleAir EPA correction values are clamped to non-negative
 
 ## 📈 Performance
 

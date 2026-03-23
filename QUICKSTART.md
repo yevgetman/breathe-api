@@ -7,7 +7,8 @@ Get up and running in 5 minutes!
 ### 1. Run Setup Script
 
 ```bash
-cd /Users/yev/Sites/air-api
+git clone https://github.com/yevgetman/breathe-api.git
+cd breathe-api
 ./setup.sh
 ```
 
@@ -116,6 +117,12 @@ python manage.py migrate
 python manage.py init_data
 ```
 
+### Run Tests
+```bash
+pytest
+# Expected output: 74 passed
+```
+
 ### Check for Issues
 ```bash
 python manage.py check
@@ -179,8 +186,8 @@ grep "execution_time_ms" logs/airquality.log
 ## 🎓 Next Steps
 
 1. ✅ Read [README.md](README.md) for comprehensive documentation
-2. ✅ Review [air_api_architecture.md](air_api_architecture.md) for architecture details
-3. ✅ Check [air_quality_api_sources.md](air_quality_api_sources.md) for data source info
+2. ✅ Read [README-API-REFERENCE.md](README-API-REFERENCE.md) for full API reference
+3. ✅ Run `pytest` to verify everything works
 4. ✅ Explore Django admin at `/admin/`
 5. ✅ Test different coordinates and parameters
 6. ✅ Set up Redis for caching (optional but recommended)

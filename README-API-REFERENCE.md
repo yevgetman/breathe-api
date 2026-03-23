@@ -52,7 +52,7 @@ curl "https://www.breathe-api.com/api/v1/air-quality/?lat=34.05&lon=-118.24"
       "so2": 0.16,
       "co": 63.36
     },
-    "sources": ["PURPLEAIR", "OPENWEATHERMAP", "AIRVISUAL", "WAQI"],
+    "sources": ["EPA_AIRNOW", "PURPLEAIR", "OPENWEATHERMAP", "WAQI"],
     "last_updated": "2025-11-05T11:44:11Z"
   },
   "health_advice": "Air quality is acceptable. However, there may be a risk for some people, particularly those who are unusually sensitive to air pollution."
@@ -84,7 +84,7 @@ GET /api/v1/air-quality/
 | `lat` | float | **Yes** | - | Latitude (-90 to 90) |
 | `lon` | float | **Yes** | - | Longitude (-180 to 180) |
 | `include_forecast` | boolean | No | false | Include 4-day hourly forecast |
-| `radius_km` | float | No | 25 | Search radius for sensors (max: 100) |
+| `radius_km` | float | No | 25 | Search radius for sensors in km (must be > 0, capped at 100) |
 | `no_cache` | boolean | No | false | Skip cache for fresh data |
 
 #### Response Structure
@@ -591,6 +591,13 @@ All errors return a consistent JSON structure:
 }
 ```
 
+**Invalid radius_km (400):**
+```json
+{
+  "error": "radius_km must be a positive number"
+}
+```
+
 **Rate Limit Exceeded (429):**
 ```json
 {
@@ -797,20 +804,21 @@ The API blends multiple sources. Priority varies by region:
 1. EPA AirNow (official)
 2. PurpleAir (sensors)
 3. OpenWeatherMap (model)
-4. WAQI (aggregator)
-5. AirVisual (model)
+4. AirVisual (model)
+5. WAQI (aggregator)
 
 **Canada:**
 1. ECCC AQHI (official)
 2. PurpleAir (sensors)
 3. OpenWeatherMap (model)
-4. WAQI (aggregator)
+4. AirVisual (model)
+5. WAQI (aggregator)
 
 **Other Countries:**
-1. WAQI (aggregator)
+1. OpenWeatherMap (model)
 2. AirVisual (model)
-3. PurpleAir (sensors)
-4. OpenWeatherMap (model)
+3. WAQI (aggregator)
+4. PurpleAir (sensors)
 
 ---
 
@@ -948,7 +956,17 @@ function isValidCoordinate(lat, lon) {
 
 ## 📝 Changelog
 
-### v1.0.0 (Current)
+### v1.1.0 (Current)
+- Circuit breakers on all adapters for fast failure recovery
+- Fixed EPA AirNow integration (was silently disabled)
+- Strict input validation: invalid `radius_km` returns 400
+- Data validation in fusion engine (NaN, negative, out-of-range filtering)
+- Graceful degradation when Redis cache is unavailable
+- API key redaction in logs for security
+- Atomic adapter status tracking
+- 74 automated tests
+
+### v1.0.0
 - Initial public release
 - 5 data sources integrated
 - 4 API endpoints available
@@ -978,9 +996,9 @@ This API aggregates data from:
 
 ---
 
-**Last Updated:** November 6, 2025  
-**API Version:** 1.0.0  
-**Documentation Version:** 1.0.0
+**Last Updated:** March 23, 2026
+**API Version:** 1.1.0
+**Documentation Version:** 1.1.0
 
 ---
 
