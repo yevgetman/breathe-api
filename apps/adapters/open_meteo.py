@@ -3,12 +3,13 @@ Open-Meteo adapter for weather data (primary provider).
 Free, no API key required, global coverage, 16-day forecast.
 """
 import logging
-from datetime import datetime
+from datetime import datetime, date as date_type
 from typing import Dict, List, Optional
 
 from django.utils import timezone
 
 from .base import BaseAdapter
+from apps.weather.astronomy import compute_moon_phase, compute_golden_hour
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +47,23 @@ WMO_WEATHER_CODES = {
 }
 
 
-def _decode_weather_code(code: Optional[int]) -> Dict:
-    """Convert WMO weather code to description and icon."""
+def _decode_weather_code(code: Optional[int], is_day: int = 1) -> Dict:
+    """Convert WMO weather code to description and icon.
+
+    Handles day/night icon variants for codes 0-2 (clear/partly cloudy).
+    """
     if code is None:
         return {'description': 'Unknown', 'icon': 'unknown'}
-    return WMO_WEATHER_CODES.get(code, {'description': 'Unknown', 'icon': 'unknown'})
+    info = WMO_WEATHER_CODES.get(code, {'description': 'Unknown', 'icon': 'unknown'})
+    icon = info['icon']
+    # Swap day→night icons when is_day == 0
+    if not is_day:
+        night_map = {
+            'clear-day': 'clear-night',
+            'partly-cloudy-day': 'partly-cloudy-night',
+        }
+        icon = night_map.get(icon, icon)
+    return {'description': info['description'], 'icon': icon}
 
 
 class OpenMeteoWeatherAdapter(BaseAdapter):
@@ -86,6 +99,13 @@ class OpenMeteoWeatherAdapter(BaseAdapter):
                 'surface_pressure', 'wind_speed_10m', 'wind_direction_10m',
                 'wind_gusts_10m', 'is_day',
             ]),
+            'hourly': ','.join([
+                'temperature_2m', 'relative_humidity_2m', 'dew_point_2m',
+                'apparent_temperature', 'precipitation', 'precipitation_probability',
+                'rain', 'showers', 'snowfall', 'weather_code', 'cloud_cover',
+                'visibility', 'wind_speed_10m', 'wind_direction_10m',
+                'wind_gusts_10m', 'is_day', 'uv_index',
+            ]),
             'daily': ','.join([
                 'weather_code', 'temperature_2m_max', 'temperature_2m_min',
                 'apparent_temperature_max', 'apparent_temperature_min',
@@ -118,7 +138,9 @@ class OpenMeteoWeatherAdapter(BaseAdapter):
         tz_name = raw_data.get('timezone', 'UTC')
 
         # Parse current conditions
-        weather_info = _decode_weather_code(current_raw.get('weather_code'))
+        current_code = current_raw.get('weather_code')
+        is_day = current_raw.get('is_day', 1)
+        weather_info = _decode_weather_code(current_code, is_day=is_day)
 
         current = {
             'temperature': current_raw.get('temperature_2m'),
@@ -135,6 +157,7 @@ class OpenMeteoWeatherAdapter(BaseAdapter):
             'wind_speed': current_raw.get('wind_speed_10m'),
             'wind_direction': current_raw.get('wind_direction_10m'),
             'wind_gusts': current_raw.get('wind_gusts_10m'),
+            'weather_code': current_code,
             'weather_description': weather_info['description'],
             'weather_icon': weather_info['icon'],
             'sunrise': None,
@@ -155,7 +178,16 @@ class OpenMeteoWeatherAdapter(BaseAdapter):
         dates = daily_raw.get('time', [])
         for i, date_str in enumerate(dates):
             day_code = self._safe_index(daily_raw.get('weather_code', []), i)
-            day_weather = _decode_weather_code(day_code)
+            day_weather = _decode_weather_code(day_code, is_day=1)
+            day_sunrise = self._safe_index(daily_raw.get('sunrise', []), i)
+            day_sunset = self._safe_index(daily_raw.get('sunset', []), i)
+
+            # Compute moon phase from date
+            try:
+                d = date_type.fromisoformat(date_str)
+                moon_phase = compute_moon_phase(d)
+            except (ValueError, TypeError):
+                moon_phase = None
 
             daily_forecast.append({
                 'date': date_str,
@@ -163,6 +195,7 @@ class OpenMeteoWeatherAdapter(BaseAdapter):
                 'temp_low': self._safe_index(daily_raw.get('temperature_2m_min', []), i),
                 'feels_like_high': self._safe_index(daily_raw.get('apparent_temperature_max', []), i),
                 'feels_like_low': self._safe_index(daily_raw.get('apparent_temperature_min', []), i),
+                'weather_code': day_code,
                 'weather_description': day_weather['description'],
                 'weather_icon': day_weather['icon'],
                 'precipitation_sum': self._safe_index(daily_raw.get('precipitation_sum', []), i),
@@ -171,12 +204,45 @@ class OpenMeteoWeatherAdapter(BaseAdapter):
                 'wind_gusts_max': self._safe_index(daily_raw.get('wind_gusts_10m_max', []), i),
                 'wind_direction_dominant': self._safe_index(daily_raw.get('wind_direction_10m_dominant', []), i),
                 'uv_index_max': self._safe_index(daily_raw.get('uv_index_max', []), i),
-                'sunrise': self._safe_index(daily_raw.get('sunrise', []), i),
-                'sunset': self._safe_index(daily_raw.get('sunset', []), i),
+                'sunrise': day_sunrise,
+                'sunset': day_sunset,
+                'moon_phase': moon_phase,
+                'golden_hour': compute_golden_hour(day_sunrise, day_sunset),
+            })
+
+        # Parse hourly forecast (limit to 48 hours for today + tomorrow)
+        hourly_raw = raw_data.get('hourly', {})
+        hourly_forecast = []
+        hourly_times = hourly_raw.get('time', [])
+        max_hourly = min(len(hourly_times), 48)
+        for i in range(max_hourly):
+            h_code = self._safe_index(hourly_raw.get('weather_code', []), i)
+            h_is_day = self._safe_index(hourly_raw.get('is_day', []), i) or 0
+            h_weather = _decode_weather_code(h_code, is_day=h_is_day)
+
+            hourly_forecast.append({
+                'time': hourly_times[i],
+                'temperature': self._safe_index(hourly_raw.get('temperature_2m', []), i),
+                'feels_like': self._safe_index(hourly_raw.get('apparent_temperature', []), i),
+                'dew_point': self._safe_index(hourly_raw.get('dew_point_2m', []), i),
+                'humidity': self._safe_index(hourly_raw.get('relative_humidity_2m', []), i),
+                'precipitation': self._safe_index(hourly_raw.get('precipitation', []), i),
+                'precipitation_probability': self._safe_index(hourly_raw.get('precipitation_probability', []), i),
+                'weather_code': h_code,
+                'weather_description': h_weather['description'],
+                'weather_icon': h_weather['icon'],
+                'cloud_cover': self._safe_index(hourly_raw.get('cloud_cover', []), i),
+                'visibility': self._safe_index(hourly_raw.get('visibility', []), i),
+                'wind_speed': self._safe_index(hourly_raw.get('wind_speed_10m', []), i),
+                'wind_direction': self._safe_index(hourly_raw.get('wind_direction_10m', []), i),
+                'wind_gusts': self._safe_index(hourly_raw.get('wind_gusts_10m', []), i),
+                'is_day': h_is_day,
+                'uv_index': self._safe_index(hourly_raw.get('uv_index', []), i),
             })
 
         return {
             'current': current,
+            'hourly_forecast': hourly_forecast,
             'daily_forecast': daily_forecast,
             'source': self.SOURCE_CODE,
             'timezone': tz_name,

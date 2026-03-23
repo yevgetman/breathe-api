@@ -154,9 +154,53 @@ DATA_SOURCES = {
     'ECCC_AQHI': 'ECCC AQHI',
     'PURPLEAIR': 'PurpleAir',
     'OPENWEATHERMAP': 'OpenWeatherMap',
+    'OPEN_METEO_AQ': 'Open-Meteo Air Quality',
     'WAQI': 'WAQI',
     'AIRVISUAL': 'AirVisual (IQAir)',
     'BREEZOMETER': 'BreezoMeter',
     'IQAIR': 'IQAir',
     'OPENAQ': 'OpenAQ',
+}
+
+# Pollen type groups: maps Open-Meteo API field names to display categories
+POLLEN_TYPE_GROUPS = {
+    'tree': ['alder_pollen', 'birch_pollen', 'olive_pollen'],
+    'grass': ['grass_pollen'],
+    'weed': ['mugwort_pollen', 'ragweed_pollen'],
+}
+
+# Pollen level thresholds (grains/m³) — levels: none, low, moderate, high, very_high
+# Based on NAB (National Allergy Bureau) guidelines adapted for Open-Meteo scale
+POLLEN_THRESHOLDS = {
+    'tree': [
+        (0, 'none'),
+        (15, 'low'),
+        (90, 'moderate'),
+        (1500, 'high'),
+        (float('inf'), 'very_high'),
+    ],
+    'grass': [
+        (0, 'none'),
+        (5, 'low'),
+        (20, 'moderate'),
+        (200, 'high'),
+        (float('inf'), 'very_high'),
+    ],
+    'weed': [
+        (0, 'none'),
+        (10, 'low'),
+        (50, 'moderate'),
+        (500, 'high'),
+        (float('inf'), 'very_high'),
+    ],
+}
+
+# Display names for individual pollen types
+POLLEN_DISPLAY_NAMES = {
+    'alder_pollen': 'Alder',
+    'birch_pollen': 'Birch',
+    'olive_pollen': 'Olive',
+    'grass_pollen': 'Grass',
+    'mugwort_pollen': 'Mugwort',
+    'ragweed_pollen': 'Ragweed',
 }

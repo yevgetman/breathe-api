@@ -68,3 +68,20 @@ def convert_forecast_to_imperial(forecast: list) -> list:
             'wind_gusts_max': mps_to_mph(day.get('wind_gusts_max')),
         })
     return converted
+
+
+def convert_hourly_to_imperial(hourly: list) -> list:
+    """Convert a list of hourly forecast dicts from metric to imperial units."""
+    converted = []
+    for h in hourly:
+        converted.append({
+            **h,
+            'temperature': celsius_to_fahrenheit(h.get('temperature')),
+            'feels_like': celsius_to_fahrenheit(h.get('feels_like')),
+            'dew_point': celsius_to_fahrenheit(h.get('dew_point')),
+            'precipitation': mm_to_inches(h.get('precipitation')),
+            'visibility': meters_to_miles(h.get('visibility')),
+            'wind_speed': mps_to_mph(h.get('wind_speed')),
+            'wind_gusts': mps_to_mph(h.get('wind_gusts')),
+        })
+    return converted

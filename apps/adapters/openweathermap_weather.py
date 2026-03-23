@@ -70,6 +70,7 @@ class OWMWeatherAdapter(BaseAdapter):
 
         return {
             'current': current,
+            'hourly_forecast': [],  # OWM free tier only has 3h intervals; not useful for hourly
             'daily_forecast': daily_forecast,
             'source': self.SOURCE_CODE,
             'timezone': None,

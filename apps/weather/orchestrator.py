@@ -14,7 +14,7 @@ from apps.adapters.openweathermap_weather import OWMWeatherAdapter
 from apps.location.services import LocationService
 
 from .models import WeatherObservation, DailyForecast
-from .utils import convert_current_to_imperial, convert_forecast_to_imperial
+from .utils import convert_current_to_imperial, convert_forecast_to_imperial, convert_hourly_to_imperial
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +70,7 @@ class WeatherOrchestrator:
             if cached:
                 if units == 'imperial':
                     cached['current'] = convert_current_to_imperial(cached['current'])
+                    cached['hourly_forecast'] = convert_hourly_to_imperial(cached.get('hourly_forecast', []))
                     cached['daily_forecast'] = convert_forecast_to_imperial(cached['daily_forecast'])
                     cached['units'] = 'imperial'
                 cached['location'] = location_info
@@ -101,6 +102,7 @@ class WeatherOrchestrator:
         response = {
             'location': location_info,
             'current': result['current'],
+            'hourly_forecast': result.get('hourly_forecast', []),
             'daily_forecast': result.get('daily_forecast', []),
             'source': result['source'],
             'units': 'metric',
@@ -109,6 +111,7 @@ class WeatherOrchestrator:
         # Convert if imperial requested
         if units == 'imperial':
             response['current'] = convert_current_to_imperial(response['current'])
+            response['hourly_forecast'] = convert_hourly_to_imperial(response['hourly_forecast'])
             response['daily_forecast'] = convert_forecast_to_imperial(response['daily_forecast'])
             response['units'] = 'imperial'
 
@@ -220,6 +223,7 @@ class WeatherOrchestrator:
         return {
             'location': location_info,
             'current': None,
+            'hourly_forecast': [],
             'daily_forecast': [],
             'source': None,
             'units': units,

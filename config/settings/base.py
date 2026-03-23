@@ -56,6 +56,7 @@ LOCAL_APPS = [
     'apps.forecast',
     'apps.api',
     'apps.weather',
+    'apps.jaspr',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -234,6 +235,7 @@ AIR_QUALITY_SETTINGS = {
         'BREEZOMETER': 0.8,
         'AIRVISUAL': 0.75,
         'WAQI': 0.65,
+        'OPEN_METEO_AQ': 0.8,
     },
     
     # Source Priority by Region
