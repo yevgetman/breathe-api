@@ -12,17 +12,21 @@ A comprehensive microservice that blends multiple air quality data sources to pr
 
 ## 🌟 Features
 
-- **Multi-Source Data Fusion**: Blends data from EPA AirNow, PurpleAir, OpenWeatherMap, WAQI, and AirVisual
+- **Multi-Source Data Fusion**: Blends data from EPA AirNow, PurpleAir, OpenWeatherMap, WAQI, AirVisual, and Open-Meteo
 - **Intelligent Weighting**: Prioritizes data based on source trust, freshness, distance, and quality
 - **Hyper-Local Data**: Utilizes community sensors for precise local measurements
-- **Forecast Support**: Aggregates 4-day air quality forecasts
+- **48-Hour Hourly Forecast**: Full hourly weather with per-hour AQI from Open-Meteo
+- **10-Day Daily Forecast**: With moon phase and golden hour computation
+- **Pollen Data**: Tree, grass, and weed pollen levels from Open-Meteo Air Quality API
+- **Combined Mobile Endpoint**: Single `/api/v1/jaspr/` call returns weather + AQ + pollen + hourly + historical
+- **Historical Comparisons**: 30-day AQI trends with factual "Hidden Gems" feature
 - **Region-Specific**: Optimized source priorities for U.S. and Canada
 - **Resilient by Design**: Circuit breakers on every adapter, graceful cache degradation, atomic status tracking
 - **Data Validation**: AQI range enforcement (0-500), NaN/Inf filtering, negative-value rejection
-- **Caching Layer**: Redis-backed caching with automatic fallback when Redis is unavailable
-- **RESTful API**: Clean, well-documented endpoints with strict input validation
+- **Caching Layer**: Redis-backed geohash caching (~1.2km cells) with automatic fallback
+- **RESTful API**: 6 endpoints with strict input validation
 - **Admin Interface**: Django admin for monitoring and configuration
-- **Test Suite**: 74 automated tests covering adapters, fusion engine, views, and utilities
+- **Test Suite**: 127+ automated tests covering adapters, fusion engine, views, and utilities
 
 ## 📋 Architecture
 

@@ -63,6 +63,19 @@ curl "https://www.breathe-api.com/api/v1/air-quality/?lat=34.05&lon=-118.24"
 
 ## 📡 API Endpoints
 
+### Overview
+
+| # | Endpoint | Purpose |
+|---|----------|---------|
+| 1 | `GET /api/v1/air-quality/` | Current AQI with 5-source fusion + forecast |
+| 2 | `GET /api/v1/weather/` | Current weather + 48h hourly + 10-day daily forecast |
+| 3 | `GET /api/v1/jaspr/` | **Combined** — weather + AQ + pollen + hourly + historical in one call |
+| 4 | `GET /api/v1/health-advice/` | Health recommendations for a given AQI value |
+| 5 | `GET /api/v1/sources/` | List data sources and their health status |
+| 6 | `GET /api/v1/health/` | System health check |
+
+---
+
 ### 1. Get Air Quality Data
 **The main endpoint** - Get current air quality information for any location.
 
@@ -171,7 +184,185 @@ curl "https://www.breathe-api.com/api/v1/air-quality/?lat=34.05&lon=-118.24&no_c
 
 ---
 
-### 2. Get Health Advice
+### 2. Get Weather Data
+**Weather endpoint** - Get current conditions, 48-hour hourly forecast, and 10-day daily forecast.
+
+```
+GET /api/v1/weather/
+```
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `lat` | float | **Yes** | - | Latitude (-90 to 90) |
+| `lon` | float | **Yes** | - | Longitude (-180 to 180) |
+| `units` | string | No | imperial | `metric` or `imperial` |
+| `no_cache` | boolean | No | false | Skip cache for fresh data |
+
+#### Response Structure
+
+```typescript
+{
+  location: { lat, lon, city, region, country },
+  current: {
+    temperature: number,          // °F (imperial) or °C (metric)
+    feels_like: number,
+    dew_point: number,
+    humidity: number,             // 0-100%
+    pressure: number,             // inHg (imperial) or hPa (metric)
+    visibility: number | null,    // miles (imperial) or meters (metric)
+    cloud_cover: number,          // 0-100%
+    uv_index: number,
+    wind_speed: number,           // mph (imperial) or m/s (metric)
+    wind_direction: number,       // degrees 0-360
+    wind_gusts: number,
+    weather_code: number,         // WMO 4677 code (integer)
+    weather_description: string,  // e.g. "Partly cloudy"
+    weather_icon: string,         // e.g. "partly-cloudy-day" (Meteocons name)
+    sunrise: string,              // ISO time
+    sunset: string,
+    observation_time: string
+  },
+  hourly_forecast: [              // 48 hours (today + tomorrow)
+    {
+      time: string,               // ISO datetime
+      temperature: number,
+      feels_like: number,
+      dew_point: number,
+      humidity: number,
+      precipitation: number,      // inches (imperial) or mm (metric)
+      precipitation_probability: number, // 0-100%
+      weather_code: number,       // WMO code
+      weather_description: string,
+      weather_icon: string,
+      cloud_cover: number,
+      visibility: number | null,
+      wind_speed: number,
+      wind_direction: number,
+      wind_gusts: number,
+      is_day: number,             // 1 = day, 0 = night
+      uv_index: number
+    }
+  ],
+  daily_forecast: [               // 10 days
+    {
+      date: string,               // YYYY-MM-DD
+      temp_high: number,
+      temp_low: number,
+      feels_like_high: number,
+      feels_like_low: number,
+      weather_code: number,
+      weather_description: string,
+      weather_icon: string,
+      precipitation_sum: number,
+      precipitation_probability: number,
+      wind_speed_max: number,
+      wind_gusts_max: number,
+      wind_direction_dominant: number,
+      uv_index_max: number,
+      sunrise: string,
+      sunset: string,
+      moon_phase: {
+        name: string,             // e.g. "Waxing Crescent"
+        value: number,            // 0.0 (new moon) to ~1.0
+        illumination: number      // 0-100%
+      },
+      golden_hour: {
+        morning: { start: string, end: string },
+        evening: { start: string, end: string }
+      }
+    }
+  ],
+  source: string,                 // "OPEN_METEO" or "OWM_WEATHER"
+  units: string                   // "metric" or "imperial"
+}
+```
+
+#### Example Request
+
+```bash
+curl "https://www.breathe-api.com/api/v1/weather/?lat=34.05&lon=-118.24&units=imperial"
+```
+
+---
+
+### 3. Get Combined JASPR Data
+**Combined endpoint** - Returns weather, air quality, pollen, hourly forecast (with per-hour AQI), daily forecast, and historical AQI comparisons in a single response. Optimized for the JASPR Weather iOS app but usable by any client.
+
+```
+GET /api/v1/jaspr/
+```
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `lat` | float | **Yes** | - | Latitude (-90 to 90) |
+| `lon` | float | **Yes** | - | Longitude (-180 to 180) |
+| `units` | string | No | imperial | `metric` or `imperial` |
+| `include_historical` | boolean | No | false | Include 30-day AQI history for "Hidden Gems" |
+| `no_cache` | boolean | No | false | Skip cache for fresh data |
+
+#### Response Structure
+
+```typescript
+{
+  location: { lat, lon, city, region, country },
+  current: {
+    // All weather fields from /api/v1/weather/ current, plus:
+    aqi: number,                  // US EPA AQI (0-500)
+    aqi_category: string,         // "Good", "Moderate", etc.
+    dominant_pollutant: string,   // "pm25", "o3", etc.
+    pollutants: { pm25, pm10, o3, no2, so2, co },
+    pollen: {
+      tree: { level: string, value: number },   // level: none/low/moderate/high/very_high
+      grass: { level: string, value: number },
+      weed: { level: string, value: number },
+      dominant_allergen: string | null           // e.g. "Birch"
+    },
+    health_advice: string
+  },
+  hourly_forecast: [              // 48 hours — weather merged with AQI
+    {
+      // All weather hourly fields, plus:
+      aqi: number | null,         // US EPA AQI for this hour
+      aqi_category: string
+    }
+  ],
+  daily_forecast: [               // 10 days (same as /api/v1/weather/)
+    { ...weather daily fields, moon_phase, golden_hour }
+  ],
+  historical: {                   // Only when include_historical=true
+    aqi_avg_30d: number,
+    aqi_min_30d: number,
+    aqi_max_30d: number,
+    today_vs_avg: {
+      aqi_delta: number,          // Negative = better than average
+      trend: string               // "improving" | "stable" | "worsening"
+    }
+  } | null,
+  hidden_gems: [                  // Factually-verified positive observations
+    {
+      text: string,               // e.g. "Clearest air in 4 weeks"
+      type: string                // "air_quality" | "weather"
+    }
+  ],
+  source: string,
+  units: string,
+  generated_at: string            // ISO timestamp of response generation
+}
+```
+
+#### Example Request
+
+```bash
+curl "https://www.breathe-api.com/api/v1/jaspr/?lat=34.05&lon=-118.24&units=imperial&include_historical=true"
+```
+
+---
+
+### 4. Get Health Advice
 **Standalone endpoint** - Get health recommendations for a specific AQI value.
 
 ```
@@ -243,7 +434,7 @@ curl "https://www.breathe-api.com/api/v1/health-advice/?aqi=165"
 
 ---
 
-### 3. List Data Sources
+### 5. List Data Sources
 **Informational endpoint** - Get information about all available data sources and their current status.
 
 ```
@@ -337,7 +528,7 @@ curl "https://www.breathe-api.com/api/v1/sources/"
 
 ---
 
-### 4. Health Check
+### 6. Health Check
 **System status endpoint** - Check if the API is operational.
 
 ```
@@ -956,15 +1147,28 @@ function isValidCoordinate(lat, lon) {
 
 ## 📝 Changelog
 
-### v1.1.0 (Current)
+### v1.2.0 (Current)
+- Combined `/api/v1/jaspr/` endpoint — weather + AQ + pollen + hourly + historical in one call
+- 48-hour hourly weather forecast with 17 fields per hour
+- Pollen data (tree, grass, weed) via Open-Meteo Air Quality API
+- Hourly AQI forecast merged with weather hourly data
+- Moon phase computation (8 phases + illumination %) on daily forecast
+- Golden hour calculation (morning + evening) on daily forecast
+- WMO weather_code exposed as integer (for client-side condition mapping)
+- Day/night icon variants (clear-day vs clear-night, partly-cloudy-day vs partly-cloudy-night)
+- Historical AQI analysis (30-day stats) with "Hidden Gems" feature
+- 127+ automated tests
+- 6 data sources integrated, 6 API endpoints
+
+### v1.1.0
 - Circuit breakers on all adapters for fast failure recovery
 - Fixed EPA AirNow integration (was silently disabled)
 - Strict input validation: invalid `radius_km` returns 400
 - Data validation in fusion engine (NaN, negative, out-of-range filtering)
 - Graceful degradation when Redis cache is unavailable
+- Geohash-based Redis caching (~1.2km spatial cells)
 - API key redaction in logs for security
 - Atomic adapter status tracking
-- 74 automated tests
 
 ### v1.0.0
 - Initial public release
@@ -997,34 +1201,37 @@ This API aggregates data from:
 ---
 
 **Last Updated:** March 23, 2026
-**API Version:** 1.1.0
-**Documentation Version:** 1.1.0
+**API Version:** 1.2.0
+**Documentation Version:** 1.2.0
 
 ---
 
 ## Quick Reference Card
 
 ```
-🌍 Main Endpoint: /api/v1/air-quality/
-   Parameters: lat, lon, include_forecast, radius_km
-   Returns: Current AQI, pollutants, location, health advice
+Combined:  /api/v1/jaspr/?lat=X&lon=Y&units=imperial&include_historical=true
+           Returns: Weather + AQ + pollen + hourly + daily + historical + hidden gems
 
-💊 Health Advice: /api/v1/health-advice/
-   Parameters: aqi, scale
-   Returns: Category, color, health message
+Weather:   /api/v1/weather/?lat=X&lon=Y&units=imperial
+           Returns: Current + 48h hourly + 10-day daily (moon phase, golden hour)
 
-📋 Data Sources: /api/v1/sources/
-   Parameters: None
-   Returns: List of all data sources and status
+AQ:        /api/v1/air-quality/?lat=X&lon=Y&include_forecast=true
+           Returns: Current AQI (5-source fusion) + forecast
 
-❤️ Health Check: /api/v1/health/
-   Parameters: None
-   Returns: System status and adapter health
+Health:    /api/v1/health-advice/?aqi=72
+           Returns: Category, color, health message
+
+Sources:   /api/v1/sources/
+           Returns: Data sources and their health status
+
+Status:    /api/v1/health/
+           Returns: System health (DB, cache, adapters)
 
 Rate Limit: 100 req/min
-Cache: 10 minutes
+Cache: 5 min (weather), 10 min (AQ)
 Coverage: Global
-Data Sources: 5
+Data Sources: 6
+Endpoints: 6
 ```
 
 ---
