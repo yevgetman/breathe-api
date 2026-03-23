@@ -57,7 +57,9 @@ class WeatherView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        units = request.query_params.get('units', 'metric').lower()
+        from django.conf import settings as django_settings
+        default_units = django_settings.WEATHER_SETTINGS.get('DEFAULT_UNITS', 'imperial')
+        units = request.query_params.get('units', default_units).lower()
         if units not in ('metric', 'imperial'):
             return Response(
                 {'error': "units must be 'metric' or 'imperial'"},

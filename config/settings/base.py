@@ -260,7 +260,7 @@ WEATHER_SETTINGS = {
     'CURRENT_CACHE_TTL': 300,          # 5 minutes for current conditions
     'FORECAST_CACHE_TTL': 1800,        # 30 minutes for daily forecast
     'FORECAST_DAYS': 10,
-    'DEFAULT_UNITS': 'metric',         # 'metric' or 'imperial'
+    'DEFAULT_UNITS': 'imperial',       # 'metric' or 'imperial'
     'REQUEST_TIMEOUT': 10,
     'MAX_RETRIES': 3,
     'RETRY_BACKOFF_FACTOR': 2,

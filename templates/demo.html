@@ -164,12 +164,7 @@
         }
         
         .response-container {
-            display: none;
             margin-top: 30px;
-        }
-        
-        .response-container.visible {
-            display: block;
         }
         
         .response-container h2 {
@@ -207,15 +202,10 @@
         }
         
         .loading {
-            display: none;
             text-align: center;
             padding: 20px;
             color: #667eea;
             font-weight: 600;
-        }
-        
-        .loading.visible {
-            display: block;
         }
         
         .spinner {
@@ -251,7 +241,7 @@
             margin-top: 30px;
         }
 
-        .dashboard.hidden { display: none; }
+        .hidden { display: none; }
 
         .panel {
             background: #f8f9fa;
@@ -408,7 +398,7 @@
                 </button>
             </div>
             
-            <div class="loading" id="loading">
+            <div class="loading hidden" id="loading">
                 <div class="spinner"></div>
                 <p>Fetching data...</p>
             </div>
@@ -444,7 +434,7 @@
             </div>
 
             <!-- Raw JSON tabs -->
-            <div class="response-container" id="responseContainer">
+            <div class="response-container hidden" id="responseContainer">
                 <h2>Raw API Responses</h2>
                 <div class="tab-bar">
                     <button class="tab-btn active" onclick="switchTab('aq')">Air Quality JSON</button>
@@ -555,22 +545,30 @@
 
         function renderWeather(data) {
             const c = data.current;
+            const imperial = data.units === 'imperial';
+            const deg = imperial ? '\u00b0F' : '\u00b0C';
+            const speedUnit = imperial ? ' mph' : ' m/s';
+            const presUnit = imperial ? ' inHg' : ' hPa';
+
             if (!c) {
                 document.getElementById('weatherContent').innerHTML = '<p style="color:#999">No weather data available</p>';
                 return;
             }
-            document.getElementById('weatherTemp').textContent = c.temperature != null ? Math.round(c.temperature) + '\u00b0C' : '--';
+            document.getElementById('weatherTemp').textContent = c.temperature != null ? Math.round(c.temperature) + deg : '--';
             document.getElementById('weatherDesc').textContent = c.weather_description || '--';
 
             let html = '';
-            if (c.feels_like != null)    html += metricHTML('Feels Like', Math.round(c.feels_like) + '\u00b0C');
+            if (c.feels_like != null)    html += metricHTML('Feels Like', Math.round(c.feels_like) + deg);
             if (c.humidity != null)      html += metricHTML('Humidity', c.humidity + '%');
-            if (c.dew_point != null)     html += metricHTML('Dew Point', c.dew_point + '\u00b0C');
-            if (c.wind_speed != null)    html += metricHTML('Wind', c.wind_speed + ' m/s' + (c.wind_direction != null ? ' \u2190 ' + c.wind_direction + '\u00b0' : ''));
-            if (c.wind_gusts != null)    html += metricHTML('Gusts', c.wind_gusts + ' m/s');
-            if (c.pressure != null)      html += metricHTML('Pressure', c.pressure + ' hPa');
+            if (c.dew_point != null)     html += metricHTML('Dew Point', c.dew_point + deg);
+            if (c.wind_speed != null)    html += metricHTML('Wind', c.wind_speed + speedUnit + (c.wind_direction != null ? ' \u2190 ' + c.wind_direction + '\u00b0' : ''));
+            if (c.wind_gusts != null)    html += metricHTML('Gusts', c.wind_gusts + speedUnit);
+            if (c.pressure != null)      html += metricHTML('Pressure', c.pressure + presUnit);
             if (c.uv_index != null)      html += metricHTML('UV Index', c.uv_index);
-            if (c.visibility != null)    html += metricHTML('Visibility', (c.visibility / 1000).toFixed(1) + ' km');
+            if (c.visibility != null) {
+                const vis = imperial ? c.visibility + ' mi' : (c.visibility / 1000).toFixed(1) + ' km';
+                html += metricHTML('Visibility', vis);
+            }
             if (c.cloud_cover != null)   html += metricHTML('Cloud Cover', c.cloud_cover + '%');
             document.getElementById('weatherMetrics').innerHTML = html;
 
@@ -579,11 +577,11 @@
             if (fc.length > 0) {
                 const fp = document.getElementById('forecastPanel');
                 fp.classList.remove('hidden');
-                const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
                 let fhtml = '';
                 fc.forEach(d => {
                     const dt = new Date(d.date + 'T12:00:00');
-                    const dayName = days[dt.getDay()];
+                    const dayName = dayNames[dt.getDay()];
                     const hi = d.temp_high != null ? Math.round(d.temp_high) + '\u00b0' : '--';
                     const lo = d.temp_low != null ? Math.round(d.temp_low) + '\u00b0' : '--';
                     fhtml += `<div class="forecast-row">
@@ -608,14 +606,14 @@
             }
 
             // UI state
-            document.getElementById('loading').classList.add('visible');
+            document.getElementById('loading').classList.remove('hidden');
             document.getElementById('dashboard').classList.add('hidden');
             document.getElementById('forecastPanel').classList.add('hidden');
-            document.getElementById('responseContainer').classList.remove('visible');
+            document.getElementById('responseContainer').classList.add('hidden');
             document.getElementById('submitBtn').disabled = true;
 
             const aqUrl = `/api/v1/air-quality/?lat=${lat}&lon=${lng}${includeForecast ? '&include_forecast=true' : ''}`;
-            const wxUrl = `/api/v1/weather/?lat=${lat}&lon=${lng}`;
+            const wxUrl = `/api/v1/weather/?lat=${lat}&lon=${lng}&units=imperial`;
 
             try {
                 // Fetch both in parallel
@@ -634,7 +632,7 @@
                 document.getElementById('responseJsonWX').textContent = wxRes ? JSON.stringify(wxRes, null, 2) : 'No data';
                 hljs.highlightElement(document.getElementById('responseJsonAQ'));
                 hljs.highlightElement(document.getElementById('responseJsonWX'));
-                document.getElementById('responseContainer').classList.add('visible');
+                document.getElementById('responseContainer').classList.remove('hidden');
 
                 document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -642,7 +640,7 @@
                 console.error('Error:', error);
                 alert('Error fetching data. Please try again.');
             } finally {
-                document.getElementById('loading').classList.remove('visible');
+                document.getElementById('loading').classList.add('hidden');
                 document.getElementById('submitBtn').disabled = false;
             }
         }
