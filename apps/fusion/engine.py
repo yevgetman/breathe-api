@@ -32,6 +32,9 @@ class FusionEngine:
     def __init__(self):
         self.settings = settings.AIR_QUALITY_SETTINGS
         self.cache_ttl = self.settings.get('RESPONSE_CACHE_TTL', 600)
+        from apps.core.cache import ResponseCache
+        precision = getattr(settings, 'CACHE_SETTINGS', {}).get('GEOHASH_PRECISION', 6)
+        self._cache = ResponseCache(namespace='aq', default_ttl=self.cache_ttl, geohash_precision=precision)
     
     def blend(
         self, 
@@ -305,81 +308,33 @@ class FusionEngine:
         return details
     
     def _get_from_cache(self, lat: float, lon: float) -> Optional[Dict]:
-        """Get blended data from cache if available and fresh.
-
-        Returns None on cache miss or if the cache backend is unavailable,
-        allowing the caller to fall through to live data fetching.
-        """
-        try:
-            # Round coordinates for cache key
-            from decimal import Decimal
-            lat_rounded = round(Decimal(str(lat)), 3)
-            lon_rounded = round(Decimal(str(lon)), 3)
-
-            cached = BlendedData.objects.get(lat=lat_rounded, lon=lon_rounded)
-
-            # Check if cache is still valid
-            if timezone.now() < cached.cached_until:
-                try:
-                    cached.increment_hit_count()
-                except Exception:
-                    pass  # non-critical
-
-                category_info = convert_aqi_to_category(cached.current_aqi, scale='EPA')
-
-                return {
-                    'lat': float(cached.lat),
-                    'lon': float(cached.lon),
-                    'current': {
-                        'aqi': cached.current_aqi,
-                        'category': cached.category,
-                        'pollutants': cached.pollutants,
-                        'sources': cached.sources,
-                        'last_updated': cached.last_updated.isoformat(),
-                    },
-                    'health_advice': category_info['health_message'] if category_info else '',
-                }
-
-            # Cache expired
-            try:
-                cached.delete()
-            except Exception:
-                pass  # non-critical
-
-        except BlendedData.DoesNotExist:
-            pass
-        except Exception as e:
-            # Cache backend failure (e.g. Redis down) – degrade gracefully
-            logger.warning(f"Cache read failed, proceeding without cache: {e}")
-
-        return None
+        """Get blended data from Redis cache (geohash-based key)."""
+        return self._cache.get(lat, lon)
     
     def _save_to_cache(self, lat: float, lon: float, result: Dict):
-        """Save blended result to cache.
+        """Save blended result to Redis cache, with optional DB write-through."""
+        self._cache.set(lat, lon, result)
 
-        Failures here are non-fatal — the response has already been built.
-        """
-        try:
-            from decimal import Decimal
-            lat_rounded = round(Decimal(str(lat)), 3)
-            lon_rounded = round(Decimal(str(lon)), 3)
-
-            cached_until = timezone.now() + timedelta(seconds=self.cache_ttl)
-
-            BlendedData.objects.update_or_create(
-                lat=lat_rounded,
-                lon=lon_rounded,
-                defaults={
-                    'current_aqi': result['current']['aqi'],
-                    'category': result['current']['category'],
-                    'pollutants': result['current']['pollutants'],
-                    'sources': result['current']['sources'],
-                    'source_count': len(result['current']['sources']),
-                    'cached_until': cached_until,
-                }
-            )
-        except Exception as e:
-            logger.warning(f"Cache write failed (non-fatal): {e}")
+        # Optional DB write-through for analytics
+        if getattr(settings, 'CACHE_SETTINGS', {}).get('WRITE_THROUGH_TO_DB', False):
+            try:
+                from decimal import Decimal
+                lat_rounded = round(Decimal(str(lat)), 3)
+                lon_rounded = round(Decimal(str(lon)), 3)
+                cached_until = timezone.now() + timedelta(seconds=self.cache_ttl)
+                BlendedData.objects.update_or_create(
+                    lat=lat_rounded, lon=lon_rounded,
+                    defaults={
+                        'current_aqi': result['current']['aqi'],
+                        'category': result['current']['category'],
+                        'pollutants': result['current']['pollutants'],
+                        'sources': result['current']['sources'],
+                        'source_count': len(result['current']['sources']),
+                        'cached_until': cached_until,
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"DB write-through failed (non-fatal): {e}")
     
     def _get_default_response(self, lat: float, lon: float) -> Dict:
         """Return default response when no data is available."""

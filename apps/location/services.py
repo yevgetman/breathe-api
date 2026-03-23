@@ -23,10 +23,13 @@ class LocationService:
     def __init__(self):
         self.geocoder = Nominatim(user_agent="air-quality-api/1.0")
         self.cache_ttl_seconds = getattr(
-            settings, 
-            'AIR_QUALITY_SETTINGS', 
+            settings,
+            'AIR_QUALITY_SETTINGS',
             {}
         ).get('LOCATION_CACHE_TTL', 86400)
+        from apps.core.cache import ResponseCache
+        precision = getattr(settings, 'CACHE_SETTINGS', {}).get('GEOHASH_PRECISION', 6)
+        self._cache = ResponseCache(namespace='loc', default_ttl=self.cache_ttl_seconds, geohash_precision=precision)
     
     def reverse_geocode(self, lat, lon, use_cache=True):
         """
@@ -64,43 +67,8 @@ class LocationService:
             return self._get_default_location(lat, lon)
     
     def _get_from_cache(self, lat, lon):
-        """Get location from cache if available and fresh.
-
-        Returns None on miss or if the DB/cache backend is unavailable.
-        """
-        try:
-            cache_entry = LocationCache.objects.get(lat=lat, lon=lon)
-
-            # Check if cache is still fresh
-            cache_age = timezone.now() - cache_entry.cached_at
-            if cache_age.total_seconds() < self.cache_ttl_seconds:
-                try:
-                    cache_entry.increment_hit_count()
-                except Exception:
-                    pass  # non-critical
-
-                return {
-                    'lat': float(cache_entry.lat),
-                    'lon': float(cache_entry.lon),
-                    'city': cache_entry.city,
-                    'region': cache_entry.region,
-                    'country': cache_entry.country,
-                    'zip_code': cache_entry.zip_code,
-                    'formatted_address': cache_entry.formatted_address,
-                }
-
-            # Cache expired, delete it
-            try:
-                cache_entry.delete()
-            except Exception:
-                pass  # non-critical
-
-        except LocationCache.DoesNotExist:
-            pass
-        except Exception as e:
-            logger.warning(f"Location cache read failed, proceeding without cache: {e}")
-
-        return None
+        """Get location from Redis cache (geohash-based key)."""
+        return self._cache.get(float(lat), float(lon))
     
     def _fetch_geocode(self, lat, lon):
         """Fetch geocoding data from external service."""
@@ -151,21 +119,23 @@ class LocationService:
         )
     
     def _save_to_cache(self, lat, lon, location_data):
-        """Save location data to cache."""
-        try:
-            LocationCache.objects.update_or_create(
-                lat=lat,
-                lon=lon,
-                defaults={
-                    'city': location_data.get('city', ''),
-                    'region': location_data.get('region', ''),
-                    'country': location_data.get('country', 'unknown'),
-                    'zip_code': location_data.get('zip_code', ''),
-                    'formatted_address': location_data.get('formatted_address', ''),
-                }
-            )
-        except Exception as e:
-            logger.error(f"Cache save error: {e}")
+        """Save location data to Redis cache, with optional DB write-through."""
+        self._cache.set(float(lat), float(lon), location_data)
+
+        if getattr(settings, 'CACHE_SETTINGS', {}).get('WRITE_THROUGH_TO_DB', False):
+            try:
+                LocationCache.objects.update_or_create(
+                    lat=lat, lon=lon,
+                    defaults={
+                        'city': location_data.get('city', ''),
+                        'region': location_data.get('region', ''),
+                        'country': location_data.get('country', 'unknown'),
+                        'zip_code': location_data.get('zip_code', ''),
+                        'formatted_address': location_data.get('formatted_address', ''),
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"DB write-through failed (non-fatal): {e}")
     
     def _get_default_location(self, lat, lon):
         """Return default location data when geocoding fails."""

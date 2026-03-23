@@ -267,6 +267,14 @@ WEATHER_SETTINGS = {
 }
 
 
+# Response Cache Settings
+
+CACHE_SETTINGS = {
+    'GEOHASH_PRECISION': 6,          # ~1.2km cells (nearby requests share cache)
+    'WRITE_THROUGH_TO_DB': True,     # Also write to DB models for analytics
+}
+
+
 # Logging Configuration
 
 # Create logs directory if it doesn't exist (for local development)

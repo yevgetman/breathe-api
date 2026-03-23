@@ -23,6 +23,9 @@ class ForecastAggregator:
     def __init__(self):
         self.settings = settings.AIR_QUALITY_SETTINGS
         self.cache_ttl = self.settings.get('RESPONSE_CACHE_TTL', 600)
+        from apps.core.cache import ResponseCache
+        precision = getattr(settings, 'CACHE_SETTINGS', {}).get('GEOHASH_PRECISION', 6)
+        self._cache = ResponseCache(namespace='fcst', default_ttl=self.cache_ttl, geohash_precision=precision)
     
     def aggregate_forecasts(
         self,
@@ -183,70 +186,42 @@ class ForecastAggregator:
         }
     
     def _get_from_cache(self, lat: float, lon: float) -> List[Dict]:
-        """Get aggregated forecasts from cache."""
-        try:
-            from decimal import Decimal
-            
-            lat_rounded = round(Decimal(str(lat)), 3)
-            lon_rounded = round(Decimal(str(lon)), 3)
-            
-            cached_forecasts = AggregatedForecast.objects.filter(
-                lat=lat_rounded,
-                lon=lon_rounded,
-                forecast_timestamp__gte=timezone.now(),
-                cached_until__gt=timezone.now()
-            ).order_by('forecast_timestamp')
-            
-            if not cached_forecasts.exists():
-                return None
-            
-            return [
-                {
-                    'timestamp': f.forecast_timestamp.isoformat(),
-                    'aqi': f.aqi,
-                    'category': f.category,
-                    'pollutants': f.pollutants,
-                    'sources': f.sources,
-                }
-                for f in cached_forecasts
-            ]
-            
-        except Exception as e:
-            logger.error(f"Error getting forecast from cache: {e}")
-            return None
-    
+        """Get aggregated forecasts from Redis cache (geohash-based key)."""
+        return self._cache.get(lat, lon)
+
     def _save_to_cache(self, lat: float, lon: float, aggregated: List[Dict]):
-        """Save aggregated forecasts to cache."""
-        try:
-            from decimal import Decimal
-            from datetime import datetime
-            
-            lat_rounded = round(Decimal(str(lat)), 3)
-            lon_rounded = round(Decimal(str(lon)), 3)
-            cached_until = timezone.now() + timedelta(seconds=self.cache_ttl)
-            
-            for forecast in aggregated:
-                timestamp_str = forecast.get('timestamp')
-                if isinstance(timestamp_str, str):
-                    timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-                    if not timezone.is_aware(timestamp):
-                        timestamp = timezone.make_aware(timestamp)
-                else:
-                    timestamp = timestamp_str
-                
-                AggregatedForecast.objects.update_or_create(
-                    lat=lat_rounded,
-                    lon=lon_rounded,
-                    forecast_timestamp=timestamp,
-                    defaults={
-                        'aqi': forecast.get('aqi'),
-                        'category': forecast.get('category'),
-                        'pollutants': forecast.get('pollutants', {}),
-                        'sources': forecast.get('sources', []),
-                        'source_count': len(forecast.get('sources', [])),
-                        'cached_until': cached_until,
-                    }
-                )
-                
-        except Exception as e:
-            logger.error(f"Error saving forecast to cache: {e}")
+        """Save aggregated forecasts to Redis cache, with optional DB write-through."""
+        self._cache.set(lat, lon, aggregated)
+
+        if getattr(settings, 'CACHE_SETTINGS', {}).get('WRITE_THROUGH_TO_DB', False):
+            try:
+                from decimal import Decimal
+                from datetime import datetime
+
+                lat_rounded = round(Decimal(str(lat)), 3)
+                lon_rounded = round(Decimal(str(lon)), 3)
+                cached_until = timezone.now() + timedelta(seconds=self.cache_ttl)
+
+                for forecast in aggregated:
+                    timestamp_str = forecast.get('timestamp')
+                    if isinstance(timestamp_str, str):
+                        timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                        if not timezone.is_aware(timestamp):
+                            timestamp = timezone.make_aware(timestamp)
+                    else:
+                        timestamp = timestamp_str
+
+                    AggregatedForecast.objects.update_or_create(
+                        lat=lat_rounded, lon=lon_rounded,
+                        forecast_timestamp=timestamp,
+                        defaults={
+                            'aqi': forecast.get('aqi'),
+                            'category': forecast.get('category'),
+                            'pollutants': forecast.get('pollutants', {}),
+                            'sources': forecast.get('sources', []),
+                            'source_count': len(forecast.get('sources', [])),
+                            'cached_until': cached_until,
+                        }
+                    )
+            except Exception as e:
+                logger.warning(f"Forecast DB write-through failed (non-fatal): {e}")

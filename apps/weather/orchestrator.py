@@ -34,6 +34,13 @@ class WeatherOrchestrator:
         self.fallback = OWMWeatherAdapter()
         self.location_service = LocationService()
         self.settings = settings.WEATHER_SETTINGS
+        from apps.core.cache import ResponseCache
+        precision = getattr(settings, 'CACHE_SETTINGS', {}).get('GEOHASH_PRECISION', 6)
+        self._cache = ResponseCache(
+            namespace='wx',
+            default_ttl=self.settings.get('CURRENT_CACHE_TTL', 300),
+            geohash_precision=precision,
+        )
 
     def get_weather(
         self,
@@ -108,83 +115,27 @@ class WeatherOrchestrator:
         return response
 
     def _get_from_cache(self, lat: float, lon: float) -> Optional[Dict]:
-        """Get cached weather data if fresh."""
-        try:
-            lat_r = round(Decimal(str(lat)), 3)
-            lon_r = round(Decimal(str(lon)), 3)
-            now = timezone.now()
-
-            obs = WeatherObservation.objects.filter(
-                lat=lat_r, lon=lon_r, cached_until__gt=now
-            ).order_by('-observation_time').first()
-
-            if not obs:
-                return None
-
-            forecasts = DailyForecast.objects.filter(
-                lat=lat_r, lon=lon_r, source=obs.source, cached_until__gt=now
-            ).order_by('forecast_date')
-
-            return {
-                'current': {
-                    'temperature': obs.temperature,
-                    'feels_like': obs.feels_like,
-                    'dew_point': obs.dew_point,
-                    'humidity': obs.humidity,
-                    'pressure': obs.pressure,
-                    'visibility': obs.visibility,
-                    'cloud_cover': obs.cloud_cover,
-                    'uv_index': obs.uv_index,
-                    'wind_speed': obs.wind_speed,
-                    'wind_direction': obs.wind_direction,
-                    'wind_gusts': obs.wind_gusts,
-                    'weather_description': obs.weather_description,
-                    'weather_icon': obs.weather_icon,
-                    'sunrise': obs.sunrise.isoformat() if obs.sunrise else None,
-                    'sunset': obs.sunset.isoformat() if obs.sunset else None,
-                    'observation_time': obs.observation_time.isoformat(),
-                },
-                'daily_forecast': [
-                    {
-                        'date': f.forecast_date.isoformat(),
-                        'temp_high': f.temp_high,
-                        'temp_low': f.temp_low,
-                        'feels_like_high': f.feels_like_high,
-                        'feels_like_low': f.feels_like_low,
-                        'weather_description': f.weather_description,
-                        'weather_icon': f.weather_icon,
-                        'precipitation_sum': f.precipitation_sum,
-                        'precipitation_probability': f.precipitation_probability,
-                        'wind_speed_max': f.wind_speed_max,
-                        'wind_gusts_max': f.wind_gusts_max,
-                        'wind_direction_dominant': f.wind_direction_dominant,
-                        'uv_index_max': f.uv_index_max,
-                        'sunrise': f.sunrise.isoformat() if f.sunrise else None,
-                        'sunset': f.sunset.isoformat() if f.sunset else None,
-                    }
-                    for f in forecasts
-                ],
-                'source': obs.source,
-                'units': 'metric',
-            }
-
-        except Exception as e:
-            logger.warning(f"Weather cache read failed: {e}")
-            return None
+        """Get weather data from Redis cache (geohash-based key)."""
+        return self._cache.get(lat, lon)
 
     def _save_to_cache(self, lat: float, lon: float, result: Dict):
-        """Cache weather data to DB."""
+        """Save weather data to Redis cache, with optional DB write-through."""
+        self._cache.set(lat, lon, result)
+
+        if getattr(settings, 'CACHE_SETTINGS', {}).get('WRITE_THROUGH_TO_DB', False):
+            self._write_through_to_db(lat, lon, result)
+
+    def _write_through_to_db(self, lat: float, lon: float, result: Dict):
+        """Write weather data to DB models for analytics (non-fatal)."""
         try:
             lat_r = round(Decimal(str(lat)), 3)
             lon_r = round(Decimal(str(lon)), 3)
             now = timezone.now()
             current_ttl = timedelta(seconds=self.settings.get('CURRENT_CACHE_TTL', 300))
             forecast_ttl = timedelta(seconds=self.settings.get('FORECAST_CACHE_TTL', 1800))
-
             current = result.get('current', {})
             source = result.get('source', 'UNKNOWN')
 
-            # Parse observation time
             obs_time = current.get('observation_time')
             if isinstance(obs_time, str):
                 from datetime import datetime as dt
@@ -194,11 +145,9 @@ class WeatherOrchestrator:
                     obs_time = now
             obs_time = obs_time or now
 
-            # Parse sunrise/sunset
             sunrise = self._parse_datetime(current.get('sunrise'))
             sunset = self._parse_datetime(current.get('sunset'))
 
-            # Save current observation
             WeatherObservation.objects.update_or_create(
                 lat=lat_r, lon=lon_r, source=source,
                 defaults={
@@ -222,11 +171,7 @@ class WeatherOrchestrator:
                 }
             )
 
-            # Save daily forecasts
             for day in result.get('daily_forecast', []):
-                day_sunrise = self._parse_datetime(day.get('sunrise'))
-                day_sunset = self._parse_datetime(day.get('sunset'))
-
                 DailyForecast.objects.update_or_create(
                     lat=lat_r, lon=lon_r, source=source,
                     forecast_date=day['date'],
@@ -244,14 +189,13 @@ class WeatherOrchestrator:
                         'wind_gusts_max': day.get('wind_gusts_max'),
                         'wind_direction_dominant': day.get('wind_direction_dominant'),
                         'uv_index_max': day.get('uv_index_max'),
-                        'sunrise': day_sunrise,
-                        'sunset': day_sunset,
+                        'sunrise': self._parse_datetime(day.get('sunrise')),
+                        'sunset': self._parse_datetime(day.get('sunset')),
                         'cached_until': now + forecast_ttl,
                     }
                 )
-
         except Exception as e:
-            logger.warning(f"Weather cache write failed (non-fatal): {e}")
+            logger.warning(f"Weather DB write-through failed (non-fatal): {e}")
 
     @staticmethod
     def _parse_datetime(value):
