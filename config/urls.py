@@ -10,6 +10,7 @@ urlpatterns = [
     path('', HomeView.as_view(), name='home'),
     path('admin/', admin.site.urls),
     path('api/v1/', include('apps.api.urls')),
+    path('api/v1/weather/', include('apps.weather.urls')),
     path('demo/', DemoView.as_view(), name='demo'),
 ]
 

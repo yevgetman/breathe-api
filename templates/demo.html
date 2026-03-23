@@ -243,17 +243,127 @@
             font-size: 0.95em;
         }
         
+        /* Weather & AQI dashboard */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-top: 30px;
+        }
+
+        .dashboard.hidden { display: none; }
+
+        .panel {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 24px;
+            border-left: 4px solid #667eea;
+        }
+
+        .panel h3 {
+            font-size: 1.3em;
+            margin-bottom: 16px;
+            color: #2d3748;
+        }
+
+        .panel-aqi { border-left-color: #48bb78; }
+        .panel-weather { border-left-color: #4299e1; }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.95em;
+        }
+
+        .metric-row:last-child { border-bottom: none; }
+        .metric-label { color: #718096; }
+        .metric-value { font-weight: 600; color: #2d3748; }
+
+        .aqi-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 1.1em;
+            color: white;
+            margin-bottom: 12px;
+        }
+
+        .weather-hero {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .weather-temp {
+            font-size: 3em;
+            font-weight: 700;
+            color: #2d3748;
+            line-height: 1;
+        }
+
+        .weather-desc {
+            font-size: 1.1em;
+            color: #718096;
+            margin-top: 4px;
+        }
+
+        .forecast-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 80px;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.9em;
+        }
+
+        .forecast-row:last-child { border-bottom: none; }
+        .forecast-day { font-weight: 600; color: #2d3748; }
+        .forecast-desc { color: #718096; text-align: center; }
+        .forecast-temps { text-align: right; color: #2d3748; font-weight: 500; }
+
+        .tab-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: #e2e8f0;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95em;
+            color: #4a5568;
+            width: auto;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .tab-btn:hover { background: #cbd5e0; transform: none; box-shadow: none; }
+        .tab-btn.active { background: #667eea; color: white; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
         @media (max-width: 768px) {
             .form-row {
                 grid-template-columns: 1fr;
             }
-            
+
             .header h1 {
                 font-size: 2em;
             }
-            
+
             #map {
                 height: 400px;
+            }
+
+            .dashboard {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -262,7 +372,7 @@
     <div class="container">
         <div class="header">
             <h1>🌍 Breathe API Demo</h1>
-            <p>Use the interactive map to get hyper-local air quality data for any location.</p>
+            <p>Click the map to get air quality and weather data for any location.</p>
         </div>
         
         <div class="content">
@@ -293,20 +403,60 @@
                     </label>
                 </div>
                 
-                <button id="submitBtn" onclick="fetchAirQuality()">
-                    Get Air Quality Data
+                <button id="submitBtn" onclick="fetchAll()">
+                    Get Air Quality & Weather
                 </button>
             </div>
             
             <div class="loading" id="loading">
                 <div class="spinner"></div>
-                <p>Fetching air quality data...</p>
+                <p>Fetching data...</p>
             </div>
-            
+
+            <!-- Visual dashboard -->
+            <div class="dashboard hidden" id="dashboard">
+                <!-- Air Quality Panel -->
+                <div class="panel panel-aqi">
+                    <h3>Air Quality</h3>
+                    <div id="aqiContent">
+                        <div id="aqiBadge" class="aqi-badge">--</div>
+                        <div id="aqiMetrics"></div>
+                    </div>
+                </div>
+
+                <!-- Weather Panel -->
+                <div class="panel panel-weather">
+                    <h3>Current Weather</h3>
+                    <div id="weatherContent">
+                        <div class="weather-hero">
+                            <div class="weather-temp" id="weatherTemp">--</div>
+                            <div class="weather-desc" id="weatherDesc">--</div>
+                        </div>
+                        <div id="weatherMetrics"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 10-Day Forecast -->
+            <div class="panel hidden" id="forecastPanel" style="margin-top:24px; border-left-color:#4299e1;">
+                <h3>10-Day Forecast</h3>
+                <div id="forecastContent"></div>
+            </div>
+
+            <!-- Raw JSON tabs -->
             <div class="response-container" id="responseContainer">
-                <h2>API Response</h2>
+                <h2>Raw API Responses</h2>
+                <div class="tab-bar">
+                    <button class="tab-btn active" onclick="switchTab('aq')">Air Quality JSON</button>
+                    <button class="tab-btn" onclick="switchTab('wx')">Weather JSON</button>
+                </div>
                 <div class="response-box">
-                    <pre><code class="language-json" id="responseJson"></code></pre>
+                    <div id="tab-aq" class="tab-content active">
+                        <pre><code class="language-json" id="responseJsonAQ"></code></pre>
+                    </div>
+                    <div id="tab-wx" class="tab-content">
+                        <pre><code class="language-json" id="responseJsonWX"></code></pre>
+                    </div>
                 </div>
             </div>
         </div>
@@ -353,58 +503,157 @@
             marker.bindPopup(`<b>Selected Location</b><br>Lat: ${lat}<br>Lng: ${lng}`).openPopup();
         });
         
-        // Fetch air quality data
-        async function fetchAirQuality() {
+        // ---- Tab switching ----
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
+        // ---- AQI colour helper ----
+        function aqiColor(aqi) {
+            if (aqi <= 50)  return '#00e400';
+            if (aqi <= 100) return '#ffff00';
+            if (aqi <= 150) return '#ff7e00';
+            if (aqi <= 200) return '#ff0000';
+            if (aqi <= 300) return '#99004c';
+            return '#7e0023';
+        }
+
+        function aqiTextColor(aqi) {
+            return aqi <= 100 ? '#333' : '#fff';
+        }
+
+        // ---- Render helpers ----
+        function metricHTML(label, value) {
+            return `<div class="metric-row"><span class="metric-label">${label}</span><span class="metric-value">${value}</span></div>`;
+        }
+
+        function renderAQI(data) {
+            const c = data.current;
+            if (!c || c.aqi == null) {
+                document.getElementById('aqiContent').innerHTML = '<p style="color:#999">No air quality data available</p>';
+                return;
+            }
+            const badge = document.getElementById('aqiBadge');
+            badge.textContent = `AQI ${c.aqi} — ${c.category || ''}`;
+            badge.style.background = aqiColor(c.aqi);
+            badge.style.color = aqiTextColor(c.aqi);
+
+            let html = '';
+            const p = c.pollutants || {};
+            if (p.pm25 != null) html += metricHTML('PM2.5', p.pm25 + ' \u00b5g/m\u00b3');
+            if (p.pm10 != null) html += metricHTML('PM10', p.pm10 + ' \u00b5g/m\u00b3');
+            if (p.o3 != null)   html += metricHTML('Ozone', p.o3 + ' \u00b5g/m\u00b3');
+            if (p.no2 != null)  html += metricHTML('NO\u2082', p.no2 + ' \u00b5g/m\u00b3');
+            if (p.so2 != null)  html += metricHTML('SO\u2082', p.so2 + ' \u00b5g/m\u00b3');
+            if (p.co != null)   html += metricHTML('CO', p.co + ' \u00b5g/m\u00b3');
+            if (c.sources) html += metricHTML('Sources', c.sources.join(', '));
+            document.getElementById('aqiMetrics').innerHTML = html;
+        }
+
+        function renderWeather(data) {
+            const c = data.current;
+            if (!c) {
+                document.getElementById('weatherContent').innerHTML = '<p style="color:#999">No weather data available</p>';
+                return;
+            }
+            document.getElementById('weatherTemp').textContent = c.temperature != null ? Math.round(c.temperature) + '\u00b0C' : '--';
+            document.getElementById('weatherDesc').textContent = c.weather_description || '--';
+
+            let html = '';
+            if (c.feels_like != null)    html += metricHTML('Feels Like', Math.round(c.feels_like) + '\u00b0C');
+            if (c.humidity != null)      html += metricHTML('Humidity', c.humidity + '%');
+            if (c.dew_point != null)     html += metricHTML('Dew Point', c.dew_point + '\u00b0C');
+            if (c.wind_speed != null)    html += metricHTML('Wind', c.wind_speed + ' m/s' + (c.wind_direction != null ? ' \u2190 ' + c.wind_direction + '\u00b0' : ''));
+            if (c.wind_gusts != null)    html += metricHTML('Gusts', c.wind_gusts + ' m/s');
+            if (c.pressure != null)      html += metricHTML('Pressure', c.pressure + ' hPa');
+            if (c.uv_index != null)      html += metricHTML('UV Index', c.uv_index);
+            if (c.visibility != null)    html += metricHTML('Visibility', (c.visibility / 1000).toFixed(1) + ' km');
+            if (c.cloud_cover != null)   html += metricHTML('Cloud Cover', c.cloud_cover + '%');
+            document.getElementById('weatherMetrics').innerHTML = html;
+
+            // Forecast
+            const fc = data.daily_forecast || [];
+            if (fc.length > 0) {
+                const fp = document.getElementById('forecastPanel');
+                fp.classList.remove('hidden');
+                const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                let fhtml = '';
+                fc.forEach(d => {
+                    const dt = new Date(d.date + 'T12:00:00');
+                    const dayName = days[dt.getDay()];
+                    const hi = d.temp_high != null ? Math.round(d.temp_high) + '\u00b0' : '--';
+                    const lo = d.temp_low != null ? Math.round(d.temp_low) + '\u00b0' : '--';
+                    fhtml += `<div class="forecast-row">
+                        <span class="forecast-day">${dayName}</span>
+                        <span class="forecast-desc">${d.weather_description || ''}</span>
+                        <span class="forecast-temps">${hi} / ${lo}</span>
+                    </div>`;
+                });
+                document.getElementById('forecastContent').innerHTML = fhtml;
+            }
+        }
+
+        // ---- Main fetch ----
+        async function fetchAll() {
             const lat = document.getElementById('latitude').value;
             const lng = document.getElementById('longitude').value;
             const includeForecast = document.getElementById('includeForecast').checked;
-            
-            // Validate inputs
+
             if (!lat || !lng) {
-                alert('Please select a location on the map or enter coordinates manually.');
+                alert('Please select a location on the map or enter coordinates.');
                 return;
             }
-            
-            // Build API URL
-            const apiUrl = `/api/v1/air-quality/?lat=${lat}&lon=${lng}${includeForecast ? '&include_forecast=true' : ''}`;
-            
-            // Show loading, hide previous response
+
+            // UI state
             document.getElementById('loading').classList.add('visible');
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('forecastPanel').classList.add('hidden');
             document.getElementById('responseContainer').classList.remove('visible');
             document.getElementById('submitBtn').disabled = true;
-            
+
+            const aqUrl = `/api/v1/air-quality/?lat=${lat}&lon=${lng}${includeForecast ? '&include_forecast=true' : ''}`;
+            const wxUrl = `/api/v1/weather/?lat=${lat}&lon=${lng}`;
+
             try {
-                const response = await fetch(apiUrl);
-                const data = await response.json();
-                
-                // Display response
-                document.getElementById('responseJson').textContent = JSON.stringify(data, null, 2);
-                hljs.highlightElement(document.getElementById('responseJson'));
-                
+                // Fetch both in parallel
+                const [aqRes, wxRes] = await Promise.all([
+                    fetch(aqUrl).then(r => r.json()).catch(() => null),
+                    fetch(wxUrl).then(r => r.json()).catch(() => null),
+                ]);
+
+                // Populate visual dashboard
+                document.getElementById('dashboard').classList.remove('hidden');
+                if (aqRes) renderAQI(aqRes);
+                if (wxRes) renderWeather(wxRes);
+
+                // Populate raw JSON tabs
+                document.getElementById('responseJsonAQ').textContent = aqRes ? JSON.stringify(aqRes, null, 2) : 'No data';
+                document.getElementById('responseJsonWX').textContent = wxRes ? JSON.stringify(wxRes, null, 2) : 'No data';
+                hljs.highlightElement(document.getElementById('responseJsonAQ'));
+                hljs.highlightElement(document.getElementById('responseJsonWX'));
                 document.getElementById('responseContainer').classList.add('visible');
-                
-                // Scroll to response
-                document.getElementById('responseContainer').scrollIntoView({ 
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-                
+
+                document.getElementById('dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
             } catch (error) {
-                console.error('Error fetching air quality data:', error);
-                alert('Error fetching air quality data. Please try again.');
+                console.error('Error:', error);
+                alert('Error fetching data. Please try again.');
             } finally {
                 document.getElementById('loading').classList.remove('visible');
                 document.getElementById('submitBtn').disabled = false;
             }
         }
-        
+
         // Allow Enter key to submit
         document.getElementById('latitude').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') fetchAirQuality();
+            if (e.key === 'Enter') fetchAll();
         });
-        
+
         document.getElementById('longitude').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') fetchAirQuality();
+            if (e.key === 'Enter') fetchAll();
         });
         
         // Set default location (Austin, TX)

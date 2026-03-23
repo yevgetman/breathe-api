@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Breathe API - Real-Time Air Quality Data for Everyone</title>
-    <meta name="description" content="Get accurate, hyper-local air quality information for any location. Perfect for health apps, weather services, and outdoor activity planning.">
+    <title>Breathe API - Air Quality & Weather Data for Everyone</title>
+    <meta name="description" content="Get accurate, hyper-local air quality and weather data for any location. Real-time conditions, 10-day forecasts, and multi-source data fusion.">
     
     <style>
         * {
@@ -390,7 +390,7 @@
     <div class="header">
         <div class="container">
             <h1>🌬️ Breathe API</h1>
-            <p class="tagline">An intelligent air quality API that blends data from multiple trusted sources to provide accurate, hyper-local readings.</p>
+            <p class="tagline">Air quality and weather data from multiple trusted sources, blended into one simple API. Real-time conditions, 10-day forecasts, and health guidance.</p>
             <a href="/demo/" class="cta-button">Try Interactive Demo →</a>
         </div>
     </div>
@@ -400,20 +400,20 @@
         <div class="container">
             <div class="stats-grid">
                 <div class="stat">
-                    <div class="stat-number">5+</div>
-                    <div class="stat-label">Sources Blended</div>
+                    <div class="stat-number">7+</div>
+                    <div class="stat-label">Data Sources</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">2</div>
+                    <div class="stat-label">APIs in One</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">10-Day</div>
+                    <div class="stat-label">Weather Forecast</div>
                 </div>
                 <div class="stat">
                     <div class="stat-number">Global</div>
                     <div class="stat-label">Coverage</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-number">&lt;2s</div>
-                    <div class="stat-label">Response Time</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-number">24/7</div>
-                    <div class="stat-label">Real-Time Updates</div>
                 </div>
             </div>
         </div>
@@ -424,18 +424,19 @@
         <div class="container">
             <h2>What is Breathe API?</h2>
             <p class="subtitle">
-                Breathe API is an <strong>intelligent aggregation platform</strong> that combines data from government monitoring stations, 
-                community sensors, and atmospheric models in real-time. A blending algorithm weighs each source based on reliability, 
-                proximity, and data freshness to provide accurate air quality readings for any location.
+                Breathe API is an <strong>intelligent aggregation platform</strong> that provides both air quality and weather data
+                through a single, unified API. Air quality readings are blended from government stations, community sensors, and
+                atmospheric models. Weather data includes current conditions and a 10-day daily forecast.
             </p>
-            
+
             <div class="highlight-box">
-                <h3>How Aggregation Improves Accuracy</h3>
+                <h3>Two APIs, One Platform</h3>
                 <p>
-                    Air quality can vary significantly across short distances. Government monitoring stations provide reliable data but 
-                    may be far from your location. Community sensors offer hyper-local readings but can have varying quality. Atmospheric 
-                    models fill coverage gaps but may miss local events. By aggregating multiple sources with intelligent weighting, 
-                    the API cross-checks data and filters anomalies to provide a more reliable reading than any single source alone.
+                    <strong>Air Quality:</strong> Aggregated from 5+ sources (EPA AirNow, PurpleAir, OpenWeatherMap, WAQI, AirVisual)
+                    with intelligent weighting based on source reliability, sensor distance, and data freshness.<br><br>
+                    <strong>Weather:</strong> Current conditions (temperature, humidity, wind, pressure, UV, visibility) plus a 10-day
+                    daily forecast with highs/lows, precipitation, and sunrise/sunset times. Powered by Open-Meteo with
+                    OpenWeatherMap fallback.
                 </p>
             </div>
         </div>
@@ -496,10 +497,28 @@
                 
                 <div class="feature-card">
                     <div class="feature-icon">🔮</div>
-                    <h3>4-Day Forecasts</h3>
+                    <h3>4-Day AQI Forecasts</h3>
                     <p>
-                        Optional hourly air quality forecasts for the next 96 hours are available by adding the 
+                        Optional hourly air quality forecasts for the next 96 hours are available by adding the
                         <code>include_forecast=true</code> parameter to your request.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🌡️</div>
+                    <h3>Weather Data</h3>
+                    <p>
+                        Current conditions including temperature, feels-like, dew point, humidity, wind speed and direction,
+                        pressure, UV index, visibility, and cloud cover. Metric and imperial units supported.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📅</div>
+                    <h3>10-Day Weather Forecast</h3>
+                    <p>
+                        Daily forecasts with high/low temperatures, precipitation probability, wind, UV index,
+                        and sunrise/sunset times. Perfect for planning outdoor activities.
                     </p>
                 </div>
             </div>
@@ -515,7 +534,7 @@
             <div class="use-cases-grid">
                 <div class="use-case">
                     <h3>🌦️ Weather Apps</h3>
-                    <p>Add air quality information alongside temperature and precipitation forecasts.</p>
+                    <p>Get weather and air quality from a single API. Temperature, AQI, forecasts, and health guidance in one call.</p>
                 </div>
                 
                 <div class="use-case">
@@ -594,8 +613,9 @@
     <section class="data-sources">
         <div class="container">
             <h2>Data Sources</h2>
-            <p class="subtitle">Air quality data is aggregated from the following providers</p>
-            
+            <p class="subtitle">Powered by trusted air quality and weather data providers</p>
+
+            <h3 style="text-align:center; color:#667eea; margin-bottom:20px;">Air Quality</h3>
             <div class="sources-grid">
                 <a href="https://www.airnow.gov/" target="_blank" rel="noopener noreferrer" class="source-badge">EPA AirNow</a>
                 <a href="https://www2.purpleair.com/" target="_blank" rel="noopener noreferrer" class="source-badge">PurpleAir</a>
@@ -604,17 +624,11 @@
                 <a href="https://www.iqair.com/" target="_blank" rel="noopener noreferrer" class="source-badge">AirVisual</a>
                 <a href="https://weather.gc.ca/airquality/pages/index_e.html" target="_blank" rel="noopener noreferrer" class="source-badge">ECCC (Canada)</a>
             </div>
-            
-            <div class="highlight-box">
-                <h3>Aggregation Process</h3>
-                <p>
-                    <strong>Step 1:</strong> Query multiple air quality APIs simultaneously (EPA AirNow, PurpleAir, OpenWeatherMap, WAQI, AirVisual, ECCC).<br><br>
-                    <strong>Step 2:</strong> Evaluate each data point based on source reliability, sensor distance from the requested location, 
-                    data timestamp, and quality indicators.<br><br>
-                    <strong>Step 3:</strong> Apply weighted blending—government sources receive 1.0 trust weight, community sensors 0.85, 
-                    atmospheric models 0.7. Distance is factored using exponential decay.<br><br>
-                    <strong>Step 4:</strong> Return a single aggregated AQI reading with contributing source attribution and detailed pollutant breakdowns.
-                </p>
+
+            <h3 style="text-align:center; color:#667eea; margin-top:40px; margin-bottom:20px;">Weather</h3>
+            <div class="sources-grid">
+                <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" class="source-badge">Open-Meteo</a>
+                <a href="https://openweathermap.org/" target="_blank" rel="noopener noreferrer" class="source-badge">OpenWeatherMap</a>
             </div>
         </div>
     </section>
@@ -636,15 +650,16 @@
     <div class="footer">
         <div class="container">
             <p>
-                <strong>Breathe API</strong> - Real-time air quality data for everyone
+                <strong>Breathe API</strong> - Air quality & weather data for everyone
             </p>
             <p style="margin-top: 15px; opacity: 0.8;">
-                <a href="/api/v1/health/">API Status</a> • 
-                <a href="/api/v1/sources/">Data Sources</a> • 
+                <a href="/api/v1/health/">API Status</a> •
+                <a href="/api/v1/sources/">Data Sources</a> •
                 <a href="/demo/">Interactive Demo</a>
             </p>
             <p style="margin-top: 20px; font-size: 0.9em; opacity: 0.7;">
-                Data provided by EPA AirNow, PurpleAir, OpenWeatherMap, WAQI, AirVisual, and ECCC
+                Air quality data by EPA AirNow, PurpleAir, OpenWeatherMap, WAQI, AirVisual & ECCC.
+                Weather data by Open-Meteo & OpenWeatherMap.
             </p>
         </div>
     </div>
