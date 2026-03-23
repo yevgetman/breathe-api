@@ -26,10 +26,12 @@ def custom_exception_handler(exc, context):
     
     # If DRF didn't handle it, create custom response
     if response is None:
+        request = context.get('request')
+        is_staff = getattr(getattr(request, 'user', None), 'is_staff', False)
         return Response(
             {
                 'error': 'Internal server error',
-                'detail': str(exc) if context.get('request').user.is_staff else 'An error occurred'
+                'detail': str(exc) if is_staff else 'An error occurred'
             },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

@@ -5,7 +5,6 @@ import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.core.cache import cache
 from django.shortcuts import render
 from django.views import View
 
@@ -71,10 +70,18 @@ class AirQualityView(APIView):
         
         try:
             radius_km = float(request.query_params.get('radius_km', 25))
+            if radius_km <= 0:
+                return Response(
+                    {'error': 'radius_km must be a positive number'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             # Limit radius
             radius_km = min(radius_km, 100)
         except (TypeError, ValueError):
-            radius_km = 25
+            return Response(
+                {'error': 'Invalid radius_km value'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         try:
             # Fetch air quality data
@@ -96,10 +103,11 @@ class AirQualityView(APIView):
             
         except Exception as e:
             logger.error(f"Error fetching air quality data: {e}", exc_info=True)
+            is_staff = getattr(getattr(request, 'user', None), 'is_staff', False)
             return Response(
                 {
                     'error': 'Internal server error',
-                    'detail': str(e) if request.user.is_staff else 'Unable to fetch air quality data'
+                    'detail': str(e) if is_staff else 'Unable to fetch air quality data'
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
@@ -162,28 +170,32 @@ class SourcesView(APIView):
         """List all data sources and their health status."""
         from apps.adapters.models import AdapterStatus
         from apps.core.models import DataSource
-        
+
         sources = []
-        
+
+        # Pre-fetch all adapter statuses in one query to avoid N+1
+        adapter_statuses = {
+            s.source: s for s in AdapterStatus.objects.all()
+        }
+
         # Get all data sources
         for data_source in DataSource.objects.filter(is_active=True):
-            # Get adapter status if available
-            try:
-                adapter_status = AdapterStatus.objects.get(source=data_source.code)
+            adapter_status = adapter_statuses.get(data_source.code)
+            if adapter_status:
                 health_status = {
                     'is_healthy': adapter_status.is_healthy,
                     'success_rate': round(adapter_status.success_rate, 2),
                     'last_success': adapter_status.last_success_at.isoformat() if adapter_status.last_success_at else None,
                     'consecutive_failures': adapter_status.consecutive_failures,
                 }
-            except AdapterStatus.DoesNotExist:
+            else:
                 health_status = {
                     'is_healthy': True,
                     'success_rate': None,
                     'last_success': None,
                     'consecutive_failures': 0,
                 }
-            
+
             sources.append({
                 'code': data_source.code,
                 'name': data_source.name,
@@ -193,7 +205,7 @@ class SourcesView(APIView):
                 'trust_weight': data_source.default_trust_weight,
                 'status': health_status,
             })
-        
+
         return Response({'sources': sources})
 
 
@@ -206,6 +218,7 @@ class HealthCheckView(APIView):
     
     def get(self, request):
         """Check system health."""
+        from django.core.cache import cache
         from django.db import connection
         from apps.adapters.models import AdapterStatus
         

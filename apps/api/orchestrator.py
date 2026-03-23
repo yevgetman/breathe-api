@@ -2,8 +2,8 @@
 Main orchestrator that coordinates all services to fetch and blend air quality data.
 """
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 from typing import Dict, List
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from django.conf import settings
 
@@ -18,6 +18,10 @@ from apps.forecast.services import ForecastAggregator
 from apps.core.utils import convert_aqi_to_category
 
 logger = logging.getLogger(__name__)
+
+# Per-adapter timeout for future.result().  Should be slightly above the
+# adapter's own REQUEST_TIMEOUT (default 10s) + retry overhead.
+_ADAPTER_FUTURE_TIMEOUT = 15  # seconds
 
 
 class AirQualityOrchestrator:
@@ -115,28 +119,35 @@ class AirQualityOrchestrator:
     ) -> List:
         """
         Fetch current data from all available adapters in parallel.
+        Uses per-adapter timeouts to avoid one slow source blocking the response.
         """
         all_data = []
-        
+
         # Get source priority for this region
         source_priority = region_config.get('source_priority', [])
-        
+
         # Determine which adapters to use based on priority and availability
         active_adapters = []
+        seen = set()
         for source_code in source_priority:
             adapter = self.adapters.get(source_code)
             if adapter and adapter.is_available():
                 active_adapters.append((source_code, adapter))
-        
+                seen.add(source_code)
+
         # Add remaining adapters not in priority list
         for source_code, adapter in self.adapters.items():
-            if source_code not in source_priority and adapter.is_available():
+            if source_code not in seen and adapter.is_available():
                 active_adapters.append((source_code, adapter))
-        
+
+        if not active_adapters:
+            logger.warning("No active adapters available")
+            return all_data
+
         # Fetch data in parallel using ThreadPoolExecutor
-        with ThreadPoolExecutor(max_workers=4) as executor:
+        with ThreadPoolExecutor(max_workers=min(len(active_adapters), 5)) as executor:
             future_to_source = {}
-            
+
             for source_code, adapter in active_adapters:
                 future = executor.submit(
                     self._safe_fetch_current,
@@ -146,18 +157,26 @@ class AirQualityOrchestrator:
                     radius_km
                 )
                 future_to_source[future] = source_code
-            
-            # Collect results
-            for future in as_completed(future_to_source):
-                source_code = future_to_source[future]
-                try:
-                    data = future.result(timeout=30)
-                    if data:
-                        all_data.extend(data)
-                        logger.info(f"Fetched {len(data)} records from {source_code}")
-                except Exception as e:
-                    logger.error(f"Error fetching from {source_code}: {e}")
-        
+
+            # Collect results with per-adapter timeout.
+            # as_completed() itself can raise TimeoutError when the aggregate
+            # deadline expires, so we catch it at the loop level.
+            try:
+                for future in as_completed(future_to_source, timeout=_ADAPTER_FUTURE_TIMEOUT + 5):
+                    source_code = future_to_source[future]
+                    try:
+                        data = future.result(timeout=_ADAPTER_FUTURE_TIMEOUT)
+                        if data:
+                            all_data.extend(data)
+                            logger.info(f"Fetched {len(data)} records from {source_code}")
+                    except FuturesTimeoutError:
+                        logger.warning(f"Timeout fetching from {source_code} – skipping")
+                        future.cancel()
+                    except Exception as e:
+                        logger.error(f"Error fetching from {source_code}: {e}")
+            except (FuturesTimeoutError, TimeoutError):
+                logger.warning("Aggregate adapter fetch deadline exceeded – returning partial results")
+
         return all_data
     
     def _safe_fetch_current(self, adapter, lat: float, lon: float, radius_km: float) -> List:
@@ -177,35 +196,45 @@ class AirQualityOrchestrator:
         Fetch forecast data from adapters that support it.
         """
         all_forecasts = []
-        
+
         # Only certain adapters support forecasts
         forecast_adapters = [
             self.adapters.get('EPA_AIRNOW'),
             self.adapters.get('OPENWEATHERMAP'),
         ]
-        
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            futures = []
-            
-            for adapter in forecast_adapters:
-                if adapter and adapter.is_available():
-                    future = executor.submit(
-                        self._safe_fetch_forecast,
-                        adapter,
-                        lat,
-                        lon
-                    )
-                    futures.append(future)
-            
+        active = [a for a in forecast_adapters if a and a.is_available()]
+
+        if not active:
+            return all_forecasts
+
+        with ThreadPoolExecutor(max_workers=len(active)) as executor:
+            future_to_adapter = {}
+
+            for adapter in active:
+                future = executor.submit(
+                    self._safe_fetch_forecast,
+                    adapter,
+                    lat,
+                    lon
+                )
+                future_to_adapter[future] = adapter.SOURCE_NAME
+
             # Collect results
-            for future in as_completed(futures):
-                try:
-                    data = future.result(timeout=30)
-                    if data:
-                        all_forecasts.extend(data)
-                except Exception as e:
-                    logger.error(f"Error fetching forecast: {e}")
-        
+            try:
+                for future in as_completed(future_to_adapter, timeout=_ADAPTER_FUTURE_TIMEOUT + 5):
+                    adapter_name = future_to_adapter[future]
+                    try:
+                        data = future.result(timeout=_ADAPTER_FUTURE_TIMEOUT)
+                        if data:
+                            all_forecasts.extend(data)
+                    except FuturesTimeoutError:
+                        logger.warning(f"Timeout fetching forecast from {adapter_name}")
+                        future.cancel()
+                    except Exception as e:
+                        logger.error(f"Error fetching forecast from {adapter_name}: {e}")
+            except (FuturesTimeoutError, TimeoutError):
+                logger.warning("Aggregate forecast fetch deadline exceeded – returning partial results")
+
         return all_forecasts
     
     def _safe_fetch_forecast(self, adapter, lat: float, lon: float) -> List[Dict]:

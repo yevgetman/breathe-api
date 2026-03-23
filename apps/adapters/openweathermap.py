@@ -92,12 +92,10 @@ class OpenWeatherMapAdapter(BaseAdapter):
                 # Get timestamp
                 dt = item.get('dt')
                 if dt:
-                    timestamp = timezone.make_aware(
-                        datetime.fromtimestamp(dt)
-                    )
+                    timestamp = datetime.fromtimestamp(dt, tz=timezone.utc)
                 else:
                     timestamp = timezone.now()
-                
+
                 # Get air quality data
                 aqi_1_5 = item.get('main', {}).get('aqi')  # 1-5 scale
                 components = item.get('components', {})
@@ -149,9 +147,7 @@ class OpenWeatherMapAdapter(BaseAdapter):
             try:
                 dt = item.get('dt')
                 if dt:
-                    timestamp = timezone.make_aware(
-                        datetime.fromtimestamp(dt)
-                    )
+                    timestamp = datetime.fromtimestamp(dt, tz=timezone.utc)
                 else:
                     continue
                 

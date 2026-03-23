@@ -92,38 +92,47 @@ def apply_purpleair_epa_correction(pm25_raw):
     if pm25_raw is None:
         return None
     
-    # EPA correction formula
+    # EPA correction formula (clamped to non-negative)
     if pm25_raw < 30:
-        return 0.524 * pm25_raw - 0.0862
+        corrected = 0.524 * pm25_raw - 0.0862
     elif pm25_raw < 50:
-        return 0.786 * pm25_raw - 5.1327
+        corrected = 0.786 * pm25_raw - 5.1327
     elif pm25_raw < 210:
-        return 0.69 * pm25_raw + 2.966
+        corrected = 0.69 * pm25_raw + 2.966
     elif pm25_raw < 260:
-        return 0.786 * pm25_raw - 5.1327
+        corrected = 0.786 * pm25_raw - 5.1327
     else:
-        return 0.69 * pm25_raw + 2.966
+        corrected = 0.69 * pm25_raw + 2.966
+    return max(0.0, corrected)
 
 
 def convert_aqi_to_category(aqi, scale='EPA'):
     """
     Convert AQI value to category information.
-    
+
     Args:
         aqi: AQI value
         scale: 'EPA' or 'AQHI'
-        
+
     Returns:
         dict: category information or None
     """
+    if aqi is None:
+        return None
+
+    try:
+        aqi = int(aqi)
+    except (TypeError, ValueError):
+        return None
+
     from .constants import EPA_AQI_CATEGORIES, AQHI_CATEGORIES
-    
+
     categories = EPA_AQI_CATEGORIES if scale == 'EPA' else AQHI_CATEGORIES
-    
+
     for category in categories:
         if category['min_value'] <= aqi <= category['max_value']:
             return category
-    
+
     return None
 
 

@@ -86,17 +86,27 @@ class PurpleAirAdapter(BaseAdapter):
         
         source_data_list = []
         
+        def _get_field(row, field_name, default=None):
+            """Safely get a field value from a sensor data row."""
+            idx = field_indices.get(field_name)
+            if idx is None or idx >= len(row):
+                return default
+            return row[idx]
+
         for sensor_data in data:
             try:
                 # Extract sensor info
-                sensor_name = sensor_data[field_indices.get('name', 0)]
-                sensor_lat = sensor_data[field_indices.get('latitude', 1)]
-                sensor_lon = sensor_data[field_indices.get('longitude', 2)]
-                
+                sensor_name = _get_field(sensor_data, 'name', 'Unknown')
+                sensor_lat = _get_field(sensor_data, 'latitude')
+                sensor_lon = _get_field(sensor_data, 'longitude')
+
+                if sensor_lat is None or sensor_lon is None:
+                    continue
+
                 # Get PM2.5 readings
-                pm25_atm = sensor_data[field_indices.get('pm2.5_atm')]
-                pm25_a = sensor_data[field_indices.get('pm2.5_atm_a')]
-                pm25_b = sensor_data[field_indices.get('pm2.5_atm_b')]
+                pm25_atm = _get_field(sensor_data, 'pm2.5_atm')
+                pm25_a = _get_field(sensor_data, 'pm2.5_atm_a')
+                pm25_b = _get_field(sensor_data, 'pm2.5_atm_b')
                 
                 # Average dual channels if both present
                 if pm25_a is not None and pm25_b is not None:
@@ -115,24 +125,22 @@ class PurpleAirAdapter(BaseAdapter):
                     pm25_corrected = pm25_raw
                 
                 # Get confidence and quality metrics
-                confidence = sensor_data[field_indices.get('confidence')]
+                confidence = _get_field(sensor_data, 'confidence')
                 min_confidence = self.settings.get('PURPLEAIR_MIN_CONFIDENCE', 80)
-                
+
                 if confidence is not None and confidence < min_confidence:
                     continue  # Skip low-confidence sensors
-                
+
                 # Calculate distance
                 distance = calculate_distance_km(
                     query_lat, query_lon,
                     float(sensor_lat), float(sensor_lon)
                 )
-                
+
                 # Get timestamp
-                last_seen = sensor_data[field_indices.get('last_seen')]
+                last_seen = _get_field(sensor_data, 'last_seen')
                 if last_seen:
-                    timestamp = timezone.make_aware(
-                        datetime.fromtimestamp(last_seen)
-                    )
+                    timestamp = datetime.fromtimestamp(last_seen, tz=timezone.utc)
                 else:
                     timestamp = timezone.now()
                 

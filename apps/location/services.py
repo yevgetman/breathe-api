@@ -64,15 +64,21 @@ class LocationService:
             return self._get_default_location(lat, lon)
     
     def _get_from_cache(self, lat, lon):
-        """Get location from cache if available and fresh."""
+        """Get location from cache if available and fresh.
+
+        Returns None on miss or if the DB/cache backend is unavailable.
+        """
         try:
             cache_entry = LocationCache.objects.get(lat=lat, lon=lon)
-            
+
             # Check if cache is still fresh
             cache_age = timezone.now() - cache_entry.cached_at
             if cache_age.total_seconds() < self.cache_ttl_seconds:
-                cache_entry.increment_hit_count()
-                
+                try:
+                    cache_entry.increment_hit_count()
+                except Exception:
+                    pass  # non-critical
+
                 return {
                     'lat': float(cache_entry.lat),
                     'lon': float(cache_entry.lon),
@@ -82,13 +88,18 @@ class LocationService:
                     'zip_code': cache_entry.zip_code,
                     'formatted_address': cache_entry.formatted_address,
                 }
-            
+
             # Cache expired, delete it
-            cache_entry.delete()
-            
+            try:
+                cache_entry.delete()
+            except Exception:
+                pass  # non-critical
+
         except LocationCache.DoesNotExist:
             pass
-        
+        except Exception as e:
+            logger.warning(f"Location cache read failed, proceeding without cache: {e}")
+
         return None
     
     def _fetch_geocode(self, lat, lon):

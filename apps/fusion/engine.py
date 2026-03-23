@@ -2,6 +2,7 @@
 Data fusion engine for blending multiple air quality sources.
 """
 import logging
+import math
 import time
 from typing import List, Dict, Optional
 from collections import defaultdict
@@ -172,10 +173,11 @@ class FusionEngine:
         time_weight = time_weight * time_factor
         
         # Distance weight (inverse relationship)
-        if source_data.distance_km is not None and source_data.distance_km > 0:
+        distance_km = source_data.distance_km
+        if distance_km is not None and distance_km > 0:
             # Closer = higher weight, max weight at 0 km, decays with distance
             max_distance = self.settings.get('DEFAULT_SEARCH_RADIUS_KM', 25)
-            distance_weight = max(0.1, 1.0 - (source_data.distance_km / max_distance))
+            distance_weight = max(0.1, 1.0 - (abs(distance_km) / max_distance))
             distance_weight = distance_weight * distance_factor
         else:
             distance_weight = 1.0
@@ -189,11 +191,11 @@ class FusionEngine:
         }
         quality_weight = quality_weights.get(source_data.quality_level, 0.5)
         
-        # Confidence score weight
-        if source_data.confidence_score:
-            confidence_weight = source_data.confidence_score / 100.0
+        # Confidence score weight (conservative default for unknown confidence)
+        if source_data.confidence_score is not None and source_data.confidence_score > 0:
+            confidence_weight = min(source_data.confidence_score, 100.0) / 100.0
         else:
-            confidence_weight = 1.0
+            confidence_weight = 0.5
         
         # Combined weight
         final_weight = (
@@ -209,52 +211,77 @@ class FusionEngine:
     def _blend_aqi(self, weighted_sources: List[tuple]) -> int:
         """
         Blend AQI values using weighted average.
-        
+
         Args:
             weighted_sources: List of (SourceData, weight) tuples
-            
+
         Returns:
-            Blended AQI value
+            Blended AQI value (0-500 range), or 0 if no valid data
         """
-        total_weight = 0
-        weighted_sum = 0
-        
+        total_weight = 0.0
+        weighted_sum = 0.0
+
         for source_data, weight in weighted_sources:
-            if source_data.aqi is not None:
-                weighted_sum += source_data.aqi * weight
-                total_weight += weight
-        
-        if total_weight == 0:
+            aqi = source_data.aqi
+            # Skip None, NaN, and out-of-range values
+            if aqi is None:
+                continue
+            try:
+                aqi = float(aqi)
+            except (TypeError, ValueError):
+                continue
+            if math.isnan(aqi) or math.isinf(aqi):
+                continue
+            if aqi < 0 or aqi > 500:
+                logger.warning(f"Skipping out-of-range AQI {aqi} from {source_data.source}")
+                continue
+
+            if weight <= 0:
+                continue
+
+            weighted_sum += aqi * weight
+            total_weight += weight
+
+        if total_weight <= 0:
             return 0
-        
+
         blended_aqi = weighted_sum / total_weight
-        return round(blended_aqi)
+        return max(0, min(500, round(blended_aqi)))
     
     def _blend_pollutants(self, weighted_sources: List[tuple]) -> Dict:
         """
         Blend pollutant concentrations using weighted average.
-        
+
         Args:
             weighted_sources: List of (SourceData, weight) tuples
-            
+
         Returns:
             Dict of blended pollutant values
         """
-        pollutant_data = defaultdict(lambda: {'sum': 0, 'weight': 0})
-        
+        pollutant_data = defaultdict(lambda: {'sum': 0.0, 'weight': 0.0})
+
         for source_data, weight in weighted_sources:
+            if not source_data.pollutants or weight <= 0:
+                continue
             for pollutant, value in source_data.pollutants.items():
-                if value is not None:
-                    pollutant_data[pollutant]['sum'] += value * weight
-                    pollutant_data[pollutant]['weight'] += weight
-        
+                if value is None:
+                    continue
+                try:
+                    value = float(value)
+                except (TypeError, ValueError):
+                    continue
+                if math.isnan(value) or math.isinf(value) or value < 0:
+                    continue
+                pollutant_data[pollutant]['sum'] += value * weight
+                pollutant_data[pollutant]['weight'] += weight
+
         # Calculate weighted averages
         blended_pollutants = {}
         for pollutant, data in pollutant_data.items():
             if data['weight'] > 0:
                 avg_value = data['sum'] / data['weight']
                 blended_pollutants[pollutant] = round(avg_value, 2)
-        
+
         return blended_pollutants
     
     def _get_source_details(self, weighted_sources: List[tuple]) -> List[Dict]:
@@ -278,21 +305,28 @@ class FusionEngine:
         return details
     
     def _get_from_cache(self, lat: float, lon: float) -> Optional[Dict]:
-        """Get blended data from cache if available and fresh."""
+        """Get blended data from cache if available and fresh.
+
+        Returns None on cache miss or if the cache backend is unavailable,
+        allowing the caller to fall through to live data fetching.
+        """
         try:
             # Round coordinates for cache key
             from decimal import Decimal
             lat_rounded = round(Decimal(str(lat)), 3)
             lon_rounded = round(Decimal(str(lon)), 3)
-            
+
             cached = BlendedData.objects.get(lat=lat_rounded, lon=lon_rounded)
-            
+
             # Check if cache is still valid
             if timezone.now() < cached.cached_until:
-                cached.increment_hit_count()
-                
+                try:
+                    cached.increment_hit_count()
+                except Exception:
+                    pass  # non-critical
+
                 category_info = convert_aqi_to_category(cached.current_aqi, scale='EPA')
-                
+
                 return {
                     'lat': float(cached.lat),
                     'lon': float(cached.lon),
@@ -305,24 +339,33 @@ class FusionEngine:
                     },
                     'health_advice': category_info['health_message'] if category_info else '',
                 }
-            
+
             # Cache expired
-            cached.delete()
-            
+            try:
+                cached.delete()
+            except Exception:
+                pass  # non-critical
+
         except BlendedData.DoesNotExist:
             pass
-        
+        except Exception as e:
+            # Cache backend failure (e.g. Redis down) – degrade gracefully
+            logger.warning(f"Cache read failed, proceeding without cache: {e}")
+
         return None
     
     def _save_to_cache(self, lat: float, lon: float, result: Dict):
-        """Save blended result to cache."""
+        """Save blended result to cache.
+
+        Failures here are non-fatal — the response has already been built.
+        """
         try:
             from decimal import Decimal
             lat_rounded = round(Decimal(str(lat)), 3)
             lon_rounded = round(Decimal(str(lon)), 3)
-            
+
             cached_until = timezone.now() + timedelta(seconds=self.cache_ttl)
-            
+
             BlendedData.objects.update_or_create(
                 lat=lat_rounded,
                 lon=lon_rounded,
@@ -336,7 +379,7 @@ class FusionEngine:
                 }
             )
         except Exception as e:
-            logger.error(f"Failed to save to cache: {e}")
+            logger.warning(f"Cache write failed (non-fatal): {e}")
     
     def _get_default_response(self, lat: float, lon: float) -> Dict:
         """Return default response when no data is available."""

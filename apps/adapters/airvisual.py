@@ -104,32 +104,13 @@ class AirVisualAdapter(BaseAdapter):
             else:
                 timestamp = timezone.now()
             
-            # Extract main pollutant and concentration
-            main_pollutant = pollution.get('mainus', '').lower()  # pm25, pm10, o3, etc.
-            concentration = pollution.get('aqius')  # Concentration value
-            
-            # Build pollutants dict
+            # Extract main pollutant identifier.
+            # Note: AirVisual free tier does NOT provide raw concentrations,
+            # only AQI values. We intentionally skip pollutant storage here
+            # to avoid blending AQI numbers with actual concentrations from
+            # other sources.
             pollutants = {}
-            if main_pollutant and concentration is not None:
-                # Map AirVisual pollutant names to our standard names
-                pollutant_map = {
-                    'p2': 'pm25',  # PM2.5
-                    'p1': 'pm10',  # PM10
-                    'o3': 'o3',    # Ozone
-                    'n2': 'no2',   # NO2
-                    's2': 'so2',   # SO2
-                    'co': 'co',    # CO
-                }
-                
-                mapped_pollutant = pollutant_map.get(main_pollutant, main_pollutant)
-                if mapped_pollutant in ['pm25', 'pm10', 'o3', 'no2', 'so2', 'co']:
-                    # Note: AirVisual doesn't provide actual concentration values in free tier
-                    # We can only get AQI, not raw concentrations
-                    pollutants[mapped_pollutant] = concentration
-            
-            # Get weather data (optional, for context)
-            weather = current.get('weather', {})
-            
+
             source_data = SourceData(
                 source=self.SOURCE_CODE,
                 lat=station_lat,

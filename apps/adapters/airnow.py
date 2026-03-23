@@ -22,6 +22,7 @@ class AirNowAdapter(BaseAdapter):
     
     SOURCE_NAME = "EPA AirNow"
     SOURCE_CODE = "EPA_AIRNOW"
+    API_KEY_SETTINGS_NAME = "AIRNOW"
     API_BASE_URL = "https://www.airnowapi.org/aq/"
     REQUIRES_API_KEY = True
     QUALITY_LEVEL = "verified"
