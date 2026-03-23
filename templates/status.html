@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breathe API - System Status</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f4f5f7;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .header h1 { font-size: 2em; margin-bottom: 6px; }
+        .header p { opacity: 0.9; font-size: 1.05em; }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+
+        /* Overall banner */
+        .overall-status {
+            text-align: center;
+            padding: 28px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        .overall-status.healthy   { background: #c6f6d5; color: #22543d; }
+        .overall-status.degraded  { background: #fefcbf; color: #744210; }
+        .overall-status.unhealthy { background: #fed7d7; color: #742a2a; }
+
+        /* Section */
+        .section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            padding: 16px 24px;
+            font-weight: 700;
+            font-size: 1.05em;
+            color: #2d3748;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-header .icon { font-size: 1.2em; }
+
+        /* Service row */
+        .service-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            padding: 14px 24px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .service-row:last-child { border-bottom: none; }
+
+        .service-info { display: flex; flex-direction: column; }
+        .service-name { font-weight: 600; color: #2d3748; }
+        .service-detail { font-size: 0.85em; color: #a0aec0; margin-top: 2px; }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .badge-ok       { background: #c6f6d5; color: #22543d; }
+        .badge-warn     { background: #fefcbf; color: #744210; }
+        .badge-down     { background: #fed7d7; color: #742a2a; }
+        .badge-unknown  { background: #e2e8f0; color: #4a5568; }
+
+        /* Stats row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            padding: 14px 24px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .stat-item { text-align: center; }
+        .stat-val { font-size: 1.4em; font-weight: 700; color: #2d3748; }
+        .stat-lbl { font-size: 0.8em; color: #a0aec0; }
+
+        /* Footer */
+        .page-footer {
+            text-align: center;
+            padding: 20px;
+            color: #a0aec0;
+            font-size: 0.9em;
+        }
+
+        .page-footer a { color: #667eea; text-decoration: none; }
+        .page-footer a:hover { text-decoration: underline; }
+
+        .refresh-note { color: #a0aec0; font-size: 0.85em; text-align: center; margin-bottom: 24px; }
+
+        @media (max-width: 600px) {
+            .service-row { grid-template-columns: 1fr; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Breathe API Status</h1>
+        <p>Real-time system health and service reachability</p>
+    </div>
+
+    <div class="container">
+        <div id="overall" class="overall-status healthy">Loading...</div>
+        <div class="refresh-note">Auto-refreshes every 30 seconds &middot; <span id="lastUpdate">--</span></div>
+
+        <!-- Infrastructure -->
+        <div class="section">
+            <div class="section-header"><span class="icon">&#9881;</span> Infrastructure</div>
+            <div id="infraRows">
+                <div class="service-row">
+                    <div class="service-info"><span class="service-name">Loading...</span></div>
+                    <span class="badge badge-unknown">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Air Quality Adapters -->
+        <div class="section">
+            <div class="section-header"><span class="icon">&#127811;</span> Air Quality Sources</div>
+            <div id="aqRows">
+                <div class="service-row">
+                    <div class="service-info"><span class="service-name">Loading...</span></div>
+                    <span class="badge badge-unknown">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weather Adapters -->
+        <div class="section">
+            <div class="section-header"><span class="icon">&#9728;</span> Weather Sources</div>
+            <div id="wxRows">
+                <div class="service-row">
+                    <div class="service-info"><span class="service-name">Loading...</span></div>
+                    <span class="badge badge-unknown">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Endpoints -->
+        <div class="section">
+            <div class="section-header"><span class="icon">&#128279;</span> API Endpoints</div>
+            <div id="endpointRows">
+                <div class="service-row">
+                    <div class="service-info"><span class="service-name">Loading...</span></div>
+                    <span class="badge badge-unknown">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-footer">
+        <a href="/">Breathe API</a> &middot; <a href="/demo/">Demo</a> &middot; <a href="/api/v1/health/">Health JSON</a>
+    </div>
+
+    <script>
+        const AQ_ADAPTERS = {
+            'EPA_AIRNOW':      { name: 'EPA AirNow',      desc: 'Official U.S. government air quality data' },
+            'PURPLEAIR':       { name: 'PurpleAir',        desc: 'Community PM2.5 sensor network' },
+            'OPENWEATHERMAP':  { name: 'OpenWeatherMap',   desc: 'Global atmospheric model (air pollution)' },
+            'WAQI':            { name: 'WAQI',             desc: 'World Air Quality Index aggregator' },
+            'AIRVISUAL':       { name: 'AirVisual (IQAir)',desc: 'Global air quality model data' },
+        };
+
+        const WX_ADAPTERS = {
+            'OPEN_METEO':  { name: 'Open-Meteo',         desc: 'Primary weather provider (free, global)' },
+            'OWM_WEATHER': { name: 'OpenWeatherMap',      desc: 'Fallback weather provider' },
+        };
+
+        const ENDPOINTS = [
+            { path: '/api/v1/air-quality/?lat=34.05&lon=-118.24', name: 'Air Quality API', desc: '/api/v1/air-quality/' },
+            { path: '/api/v1/weather/?lat=34.05&lon=-118.24',     name: 'Weather API',     desc: '/api/v1/weather/' },
+            { path: '/api/v1/health-advice/?aqi=50',              name: 'Health Advice',   desc: '/api/v1/health-advice/' },
+            { path: '/api/v1/sources/',                           name: 'Sources List',    desc: '/api/v1/sources/' },
+        ];
+
+        function badge(ok, label) {
+            if (ok === true)  return `<span class="badge badge-ok">${label || 'Operational'}</span>`;
+            if (ok === false) return `<span class="badge badge-down">${label || 'Down'}</span>`;
+            return `<span class="badge badge-unknown">${label || 'Unknown'}</span>`;
+        }
+
+        function serviceRow(name, desc, ok, detail) {
+            const detailHtml = detail ? `<span class="service-detail">${detail}</span>` : '';
+            return `<div class="service-row">
+                <div class="service-info"><span class="service-name">${name}</span>${detailHtml}</div>
+                ${badge(ok)}
+            </div>`;
+        }
+
+        function statsRow(stats) {
+            return `<div class="stats-row">${stats.map(s =>
+                `<div class="stat-item"><div class="stat-val">${s.val}</div><div class="stat-lbl">${s.lbl}</div></div>`
+            ).join('')}</div>`;
+        }
+
+        async function fetchStatus() {
+            let healthData = null;
+            let endpointResults = [];
+
+            // 1. Fetch /api/v1/health/ for infra + adapter status
+            try {
+                const res = await fetch('/api/v1/health/');
+                healthData = await res.json();
+            } catch (e) {
+                healthData = { status: 'unhealthy', database: false, cache: false, adapters: {} };
+            }
+
+            // 2. Probe each endpoint
+            endpointResults = await Promise.all(ENDPOINTS.map(async ep => {
+                try {
+                    const start = performance.now();
+                    const res = await fetch(ep.path);
+                    const ms = Math.round(performance.now() - start);
+                    return { ...ep, ok: res.ok, ms, status: res.status };
+                } catch (e) {
+                    return { ...ep, ok: false, ms: null, status: 0 };
+                }
+            }));
+
+            // --- Render ---
+
+            // Overall banner
+            const el = document.getElementById('overall');
+            const s = healthData.status || 'unhealthy';
+            el.className = `overall-status ${s}`;
+            if (s === 'healthy')   el.textContent = 'All Systems Operational';
+            else if (s === 'degraded') el.textContent = 'Partial Service Degradation';
+            else                   el.textContent = 'System Outage';
+
+            // Infrastructure
+            let infraHtml = serviceRow('PostgreSQL Database', 'Primary data store', healthData.database);
+            infraHtml += serviceRow('Redis Cache', 'Response caching & geohash spatial keys', healthData.cache);
+            document.getElementById('infraRows').innerHTML = infraHtml;
+
+            // AQ adapters
+            let aqHtml = '';
+            for (const [code, info] of Object.entries(AQ_ADAPTERS)) {
+                const adapterOk = healthData.adapters[code];
+                const detail = adapterOk === undefined ? 'No status data yet' : info.desc;
+                aqHtml += serviceRow(info.name, detail, adapterOk);
+            }
+            document.getElementById('aqRows').innerHTML = aqHtml;
+
+            // Weather adapters
+            let wxHtml = '';
+            for (const [code, info] of Object.entries(WX_ADAPTERS)) {
+                const adapterOk = healthData.adapters[code];
+                const detail = adapterOk === undefined ? 'No status data yet' : info.desc;
+                wxHtml += serviceRow(info.name, detail, adapterOk);
+            }
+            document.getElementById('wxRows').innerHTML = wxHtml;
+
+            // Endpoints
+            let epHtml = '';
+            for (const ep of endpointResults) {
+                const detail = ep.ok ? `${ep.ms}ms response time` : `HTTP ${ep.status}`;
+                epHtml += serviceRow(ep.name, ep.desc, ep.ok, detail);
+            }
+            document.getElementById('endpointRows').innerHTML = epHtml;
+
+            // Timestamp
+            document.getElementById('lastUpdate').textContent =
+                'Last checked ' + new Date().toLocaleTimeString();
+        }
+
+        // Initial fetch + auto-refresh
+        fetchStatus();
+        setInterval(fetchStatus, 30000);
+    </script>
+</body>
+</html>

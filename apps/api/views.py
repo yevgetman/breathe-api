@@ -279,10 +279,22 @@ class HomeView(View):
 class DemoView(View):
     """
     Interactive demo page with world map.
-    
+
     GET /demo/
     """
-    
+
     def get(self, request):
         """Render the demo page."""
         return render(request, 'demo.html')
+
+
+class StatusView(View):
+    """
+    System status page showing service reachability.
+
+    GET /status/
+    """
+
+    def get(self, request):
+        """Render the status page."""
+        return render(request, 'status.html')
