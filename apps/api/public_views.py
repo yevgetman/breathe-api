@@ -16,6 +16,8 @@ from .orchestrator import AirQualityOrchestrator
 from .serializers import AirQualityResponseSerializer
 from apps.weather.orchestrator import WeatherOrchestrator
 from apps.weather.serializers import WeatherResponseSerializer
+from apps.jaspr.orchestrator import JasprOrchestrator
+from apps.jaspr.serializers import JasprResponseSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -138,3 +140,57 @@ class PublicWeatherView(APIView):
         except Exception as e:
             logger.error(f"Public weather endpoint error: {e}", exc_info=True)
             return Response({'error': 'Unable to fetch weather data'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PublicJasprView(APIView):
+    """
+    Public combined endpoint for the demo page.
+    Same as /api/v1/jaspr/ but requires no API key.
+
+    GET /api/v1/public/jaspr/?lat=34.05&lon=-118.24&units=imperial
+    """
+    permission_classes = [AllowAny]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orchestrator = JasprOrchestrator()
+
+    def get(self, request):
+        lat = request.query_params.get('lat')
+        lon = request.query_params.get('lon')
+
+        if not lat or not lon:
+            return Response(
+                {'error': 'Missing required parameters: lat and lon'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except (TypeError, ValueError):
+            return Response({'error': 'Invalid coordinate format'}, status=status.HTTP_400_BAD_REQUEST)
+
+        is_valid, error_message = validate_coordinates(lat, lon)
+        if not is_valid:
+            return Response({'error': error_message}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.conf import settings as django_settings
+        default_units = django_settings.WEATHER_SETTINGS.get('DEFAULT_UNITS', 'imperial')
+        units = request.query_params.get('units', default_units).lower()
+        if units not in ('metric', 'imperial'):
+            return Response({'error': "units must be 'metric' or 'imperial'"}, status=status.HTTP_400_BAD_REQUEST)
+
+        include_historical = request.query_params.get('include_historical', 'false').lower() == 'true'
+
+        try:
+            result = self.orchestrator.get_jaspr_data(
+                lat=lat, lon=lon, units=units, include_historical=include_historical,
+            )
+            serializer = JasprResponseSerializer(data=result)
+            if serializer.is_valid():
+                return Response(serializer.data)
+            return Response(result)
+        except Exception as e:
+            logger.error(f"Public JASPR endpoint error: {e}", exc_info=True)
+            return Response({'error': 'Unable to fetch data'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
