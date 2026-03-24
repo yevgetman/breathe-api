@@ -233,7 +233,10 @@
         }
         function fmtTime(iso) {
             if (!iso) return '--';
-            const d = new Date(iso.includes('T') && !iso.includes('+') && !iso.includes('Z') ? iso + ':00' : iso);
+            // Open-Meteo returns local times without timezone (e.g. "2026-03-23T06:51" or "2026-03-23T06:51:00")
+            // Treat as local by not appending anything — just parse directly
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return '--';
             return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
         }
         function fmtHour(iso) {
