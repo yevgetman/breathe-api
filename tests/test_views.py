@@ -8,6 +8,13 @@ from django.test import RequestFactory
 from rest_framework.test import APIRequestFactory
 
 
+def _authenticate(request, api_key):
+    """Attach API key auth to an APIRequestFactory request."""
+    from rest_framework.test import force_authenticate
+    # DRF force_authenticate sets request.auth
+    force_authenticate(request, user=None, token=api_key)
+
+
 @pytest.mark.django_db
 class TestAirQualityViewValidation:
     """Tests for AirQualityView input validation."""
@@ -16,63 +23,71 @@ class TestAirQualityViewValidation:
         from apps.api.views import AirQualityView
         return AirQualityView.as_view()
 
-    def test_missing_lat_lon_returns_400(self):
+    def test_missing_lat_lon_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/air-quality/')
+        _authenticate(request, api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
         assert 'lat and lon' in response.data['error']
 
-    def test_missing_lon_returns_400(self):
+    def test_missing_lon_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/air-quality/', {'lat': '34.05'})
+        _authenticate(request, api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
 
-    def test_non_numeric_lat_returns_400(self):
+    def test_non_numeric_lat_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/air-quality/', {'lat': 'abc', 'lon': '-118.24'})
+        _authenticate(request, api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
         assert 'Invalid coordinate' in response.data['error']
 
-    def test_out_of_range_lat_returns_400(self):
+    def test_out_of_range_lat_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/air-quality/', {'lat': '91', 'lon': '-118.24'})
+        _authenticate(request, api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
         assert 'Latitude' in response.data['error']
 
-    def test_out_of_range_lon_returns_400(self):
+    def test_out_of_range_lon_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/air-quality/', {'lat': '34.05', 'lon': '181'})
+        _authenticate(request, api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
         assert 'Longitude' in response.data['error']
 
-    def test_invalid_radius_returns_400(self):
+    def test_invalid_radius_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/air-quality/', {
             'lat': '34.05', 'lon': '-118.24', 'radius_km': 'abc'
         })
+        _authenticate(request, api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
         assert 'radius_km' in response.data['error'].lower()
 
-    def test_negative_radius_returns_400(self):
+    def test_negative_radius_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/air-quality/', {
             'lat': '34.05', 'lon': '-118.24', 'radius_km': '-5'
         })
+        _authenticate(request, api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
 
-    def test_radius_capped_at_100(self):
+    def test_radius_capped_at_100(self, api_key):
         """Valid large radius should be capped, not rejected."""
         factory = APIRequestFactory()
         request = factory.get('/api/v1/air-quality/', {
             'lat': '34.05', 'lon': '-118.24', 'radius_km': '200'
         })
+        _authenticate(request, api_key)
 
         mock_result = {
             'lat': 34.05,
@@ -94,6 +109,13 @@ class TestAirQualityViewValidation:
         # Should succeed (radius capped to 100, not rejected)
         assert response.status_code == 200
 
+    def test_unauthenticated_returns_403(self):
+        """Requests without API key should be rejected."""
+        factory = APIRequestFactory()
+        request = factory.get('/api/v1/air-quality/', {'lat': '34.05', 'lon': '-118.24'})
+        response = self._get_view()(request)
+        assert response.status_code in (401, 403)
+
 
 @pytest.mark.django_db
 class TestHealthAdviceViewValidation:
@@ -102,17 +124,34 @@ class TestHealthAdviceViewValidation:
         from apps.api.views import HealthAdviceView
         return HealthAdviceView.as_view()
 
-    def test_missing_aqi_returns_400(self):
+    def test_missing_aqi_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/health-advice/')
+        _authenticate(request, api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
 
-    def test_non_numeric_aqi_returns_400(self):
+    def test_non_numeric_aqi_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/health-advice/', {'aqi': 'bad'})
+        _authenticate(request, api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
+
+
+@pytest.mark.django_db
+class TestHealthCheckIsPublic:
+
+    def _get_view(self):
+        from apps.api.views import HealthCheckView
+        return HealthCheckView.as_view()
+
+    def test_health_check_no_auth_returns_200(self):
+        """Health check must work without an API key."""
+        factory = APIRequestFactory()
+        request = factory.get('/api/v1/health/')
+        response = self._get_view()(request)
+        assert response.status_code == 200
 
 
 class TestConvertAqiToCategory:

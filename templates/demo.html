@@ -612,8 +612,8 @@
             document.getElementById('responseContainer').classList.add('hidden');
             document.getElementById('submitBtn').disabled = true;
 
-            const aqUrl = `/api/v1/air-quality/?lat=${lat}&lon=${lng}${includeForecast ? '&include_forecast=true' : ''}`;
-            const wxUrl = `/api/v1/weather/?lat=${lat}&lon=${lng}&units=imperial`;
+            const aqUrl = `/api/v1/public/air-quality/?lat=${lat}&lon=${lng}${includeForecast ? '&include_forecast=true' : ''}`;
+            const wxUrl = `/api/v1/public/weather/?lat=${lat}&lon=${lng}&units=imperial`;
 
             try {
                 // Fetch both in parallel

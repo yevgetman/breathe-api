@@ -4,7 +4,7 @@ Tests for weather endpoints, adapters, orchestrator, and unit conversions.
 import pytest
 from unittest.mock import patch, MagicMock
 
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIRequestFactory, force_authenticate
 
 from apps.weather.utils import (
     celsius_to_fahrenheit,
@@ -177,39 +177,44 @@ class TestWeatherViewValidation:
         from apps.weather.views import WeatherView
         return WeatherView.as_view()
 
-    def test_missing_lat_lon_returns_400(self):
+    def test_missing_lat_lon_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/weather/')
+        force_authenticate(request, user=None, token=api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
         assert 'lat and lon' in response.data['error']
 
-    def test_invalid_coordinates_returns_400(self):
+    def test_invalid_coordinates_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/weather/', {'lat': 'abc', 'lon': '0'})
+        force_authenticate(request, user=None, token=api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
 
-    def test_out_of_range_lat_returns_400(self):
+    def test_out_of_range_lat_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/weather/', {'lat': '91', 'lon': '0'})
+        force_authenticate(request, user=None, token=api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
 
-    def test_invalid_units_returns_400(self):
+    def test_invalid_units_returns_400(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/weather/', {
             'lat': '34.05', 'lon': '-118.24', 'units': 'kelvin'
         })
+        force_authenticate(request, user=None, token=api_key)
         response = self._get_view()(request)
         assert response.status_code == 400
         assert 'units' in response.data['error']
 
-    def test_valid_request_returns_200(self):
+    def test_valid_request_returns_200(self, api_key):
         factory = APIRequestFactory()
         request = factory.get('/api/v1/weather/', {
             'lat': '34.05', 'lon': '-118.24'
         })
+        force_authenticate(request, user=None, token=api_key)
 
         mock_result = {
             'location': {
@@ -238,3 +243,10 @@ class TestWeatherViewValidation:
             response = self._get_view()(request)
 
         assert response.status_code == 200
+
+    def test_unauthenticated_returns_403(self):
+        """Weather requests without API key should be rejected."""
+        factory = APIRequestFactory()
+        request = factory.get('/api/v1/weather/', {'lat': '34.05', 'lon': '-118.24'})
+        response = self._get_view()(request)
+        assert response.status_code in (401, 403)

@@ -4,6 +4,7 @@ API views for air quality endpoints.
 import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from rest_framework import status
 from django.shortcuts import render
 from django.views import View
@@ -212,9 +213,10 @@ class SourcesView(APIView):
 class HealthCheckView(APIView):
     """
     Health check endpoint for monitoring.
-    
+
     GET /api/v1/health/
     """
+    permission_classes = [AllowAny]
     
     def get(self, request):
         """Check system health."""

@@ -7,6 +7,7 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 
 from django.utils import timezone
+from rest_framework.test import APIClient
 
 
 @pytest.fixture
@@ -49,6 +50,21 @@ def make_source_data():
             station_name=kwargs.get('station_name', 'Test Station'),
         )
     return _make
+
+
+@pytest.fixture
+def api_key(db):
+    """Create an active API key for authenticated test requests."""
+    from apps.core.models import APIKey
+    return APIKey.generate(name='Test Key')
+
+
+@pytest.fixture
+def auth_client(api_key):
+    """APIClient with a valid X-API-Key header."""
+    client = APIClient()
+    client.credentials(HTTP_X_API_KEY=api_key.key)
+    return client
 
 
 @pytest.fixture

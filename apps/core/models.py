@@ -1,6 +1,8 @@
 """
 Core models and base classes for Air Quality API.
 """
+import secrets
+
 from django.db import models
 
 
@@ -55,6 +57,33 @@ class AQICategory(models.Model):
             )
         except cls.DoesNotExist:
             return None
+
+
+class APIKey(TimeStampedModel):
+    """
+    API key for authenticating client requests.
+    Keys are 40-character hex tokens.
+    """
+    key = models.CharField(max_length=64, unique=True, db_index=True)
+    name = models.CharField(max_length=100, help_text="Label for this key, e.g. 'JASPR iOS App'")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'API Key'
+        verbose_name_plural = 'API Keys'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        prefix = self.key[:8]
+        return f"{self.name} ({prefix}...)"
+
+    @classmethod
+    def generate(cls, name: str) -> 'APIKey':
+        """Create a new API key with a random token."""
+        return cls.objects.create(
+            key=secrets.token_hex(20),
+            name=name,
+        )
 
 
 class DataSource(models.Model):
